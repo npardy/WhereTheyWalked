@@ -1,2 +1,9 @@
-anthropic>=0.18.0
-geopy>=2.4.0
+# Core dependencies
+anthropic>=0.18.0  # Claude API for AI synthesis
+geopy>=2.4.0       # Geocoding via Nominatim
+
+# Note: Search APIs (SerpAPI, Brave) use only standard library (urllib)
+# Set these environment variables to enable search:
+#   SERPAPI_KEY      - SerpAPI key (https://serpapi.com/)
+#   BRAVE_API_KEY    - Brave Search API key (https://brave.com/search/api/)
+#   ANTHROPIC_API_KEY - Required for AI synthesis

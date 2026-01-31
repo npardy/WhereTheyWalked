@@ -9,8 +9,15 @@ from pathlib import Path
 from datetime import datetime
 
 from .gedcom_parser import GedcomParser
-from .researcher import AncestorResearcher, ResearchResult
+from .researcher import AncestorResearcher, ResearchResult, create_anthropic_synthesizer
 from .locations import LocationProcessor, create_nominatim_geocoder
+from .search import (
+    create_serpapi_search,
+    create_brave_search,
+    create_auto_search,
+    create_mock_search,
+    get_available_providers
+)
 
 
 class WhereTheyWalked:
@@ -277,18 +284,142 @@ class WhereTheyWalked:
         }
 
 
+def create_app(search_provider: str = "auto",
+               use_mock: bool = False,
+               verbose: bool = False) -> WhereTheyWalked:
+    """
+    Create a fully-configured WhereTheyWalked application instance.
+
+    This factory function automatically configures the search and synthesis
+    functions based on available API keys in environment variables.
+
+    Environment variables:
+        ANTHROPIC_API_KEY: Required for AI synthesis (Claude Haiku)
+        SERPAPI_KEY: For Google search via SerpAPI
+        BRAVE_API_KEY: For Brave Search API
+
+    Args:
+        search_provider: Search provider to use:
+            - "auto": Automatically select based on available API keys
+            - "serpapi": Use SerpAPI (requires SERPAPI_KEY)
+            - "brave": Use Brave Search (requires BRAVE_API_KEY)
+            - "mock": Use mock search (for testing)
+        use_mock: If True, use mock functions for both search and synthesis
+        verbose: Print configuration details
+
+    Returns:
+        Configured WhereTheyWalked instance
+
+    Raises:
+        ValueError: If required API keys are not available
+
+    Example:
+        # Auto-configure from environment
+        app = create_app()
+
+        # Use specific search provider
+        app = create_app(search_provider="serpapi")
+
+        # Testing without API calls
+        app = create_app(use_mock=True)
+    """
+    search_fn = None
+    synthesize_fn = None
+
+    if use_mock:
+        if verbose:
+            print("Using mock functions (no real API calls)")
+        search_fn = create_mock_search()
+        # Use mock synthesize (returns minimal placeholder data)
+        from .researcher import mock_synthesize
+        synthesize_fn = mock_synthesize
+    else:
+        # Configure search
+        if search_provider == "mock":
+            search_fn = create_mock_search()
+            if verbose:
+                print("Using mock search")
+        elif search_provider == "auto":
+            search_fn = create_auto_search()
+            if search_fn and verbose:
+                providers = get_available_providers()
+                print(f"Auto-selected search provider: {providers[0] if providers else 'none'}")
+        elif search_provider == "serpapi":
+            search_fn = create_serpapi_search()
+            if verbose:
+                print("Using SerpAPI search")
+        elif search_provider == "brave":
+            search_fn = create_brave_search()
+            if verbose:
+                print("Using Brave Search")
+        else:
+            raise ValueError(f"Unknown search provider: {search_provider}")
+
+        if not search_fn:
+            if verbose:
+                print("Warning: No search API configured. Set SERPAPI_KEY or BRAVE_API_KEY.")
+
+        # Configure synthesis
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+        if anthropic_key:
+            synthesize_fn = create_anthropic_synthesizer(anthropic_key)
+            if verbose:
+                print("Using Anthropic Claude Haiku for synthesis")
+        else:
+            if verbose:
+                print("Warning: ANTHROPIC_API_KEY not set. Synthesis disabled.")
+
+    # Create and return app
+    return WhereTheyWalked(
+        search_fn=search_fn,
+        synthesize_fn=synthesize_fn,
+        geocode_fn=create_nominatim_geocoder()
+    )
+
+
+def get_api_status() -> dict:
+    """
+    Check which APIs are configured and available.
+
+    Returns:
+        Dict with status of each API
+    """
+    return {
+        "search": {
+            "serpapi": bool(os.environ.get("SERPAPI_KEY")),
+            "brave": bool(os.environ.get("BRAVE_API_KEY")),
+            "available_providers": get_available_providers()
+        },
+        "synthesis": {
+            "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY"))
+        },
+        "geocoding": {
+            "nominatim": True  # Always available (free, rate-limited)
+        }
+    }
+
+
 def main():
     """Command line interface."""
     import sys
-    
+
     if len(sys.argv) < 2:
-        print("Usage: python main.py <gedcom_file> [--limit N] [--output FILE]")
+        print("Usage: python main.py <gedcom_file> [--limit N] [--output FILE] [--research]")
+        print("\nOptions:")
+        print("  --limit N     Limit number of ancestors to research")
+        print("  --output FILE Output file path (default: output.json)")
+        print("  --research    Actually run research (requires API keys)")
+        print("\nAPI Keys (set as environment variables):")
+        print("  ANTHROPIC_API_KEY  Required for AI synthesis")
+        print("  SERPAPI_KEY        For Google search via SerpAPI")
+        print("  BRAVE_API_KEY      Alternative: Brave Search API")
         sys.exit(1)
-    
+
     filepath = sys.argv[1]
     limit = None
     output = "output.json"
-    
+    do_research = "--research" in sys.argv
+
     # Parse args
     args = sys.argv[2:]
     for i, arg in enumerate(args):
@@ -296,24 +427,61 @@ def main():
             limit = int(args[i + 1])
         elif arg == "--output" and i + 1 < len(args):
             output = args[i + 1]
-    
-    # Initialize app (without search/synthesis for CLI test)
-    app = WhereTheyWalked()
-    
+
+    # Check API status
+    status = get_api_status()
+    print("API Status:")
+    print(f"  Search: {status['search']['available_providers'] or 'Not configured'}")
+    print(f"  Synthesis: {'Configured' if status['synthesis']['anthropic'] else 'Not configured'}")
+    print()
+
+    # Initialize app
+    if do_research:
+        app = create_app(verbose=True)
+    else:
+        app = WhereTheyWalked()
+
     # Load GEDCOM
     print(f"Loading {filepath}...")
     stats = app.load_gedcom(filepath)
     print(f"Found {stats['total_individuals']} individuals, {stats['unique_surnames']} surnames")
-    
+
     # Get researchable
     researchable = app.get_researchable(limit=limit)
     print(f"\n{len(researchable)} researchable individuals")
-    
+
     # Show sample
     print("\nSample (first 5):")
     for ind in researchable[:5]:
         print(f"  {ind['full_name']} ({ind['birth_year'] or '?'}-{ind['death_year'] or '?'})")
         print(f"    Query: {ind['search_query']}")
+
+    if do_research:
+        if not status['synthesis']['anthropic']:
+            print("\nError: ANTHROPIC_API_KEY required for research. Exiting.")
+            sys.exit(1)
+
+        print(f"\nResearching {len(researchable)} ancestors...")
+
+        def progress(current, total, result):
+            print(f"  [{current}/{total}] {result.full_name} - {result.confidence} confidence")
+
+        results = app.research_ancestors(individuals=researchable, progress_callback=progress, verbose=True)
+
+        print(f"\nProcessing locations...")
+        loc_stats = app.process_locations(verbose=True)
+
+        print(f"\nExporting to {output}...")
+        app.export_json(output)
+
+        # Summary
+        stats = app.get_stats()
+        print(f"\n=== Summary ===")
+        print(f"Ancestors researched: {stats['ancestors']['total_researched']}")
+        print(f"Notable ancestors: {stats['ancestors']['notable_count']}")
+        print(f"High confidence: {stats['ancestors']['high_confidence']}")
+        print(f"Locations found: {loc_stats.get('total_locations', 0)}")
+        print(f"With coordinates: {loc_stats.get('with_coordinates', 0)}")
 
 
 if __name__ == "__main__":
