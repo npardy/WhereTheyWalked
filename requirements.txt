@@ -1,0 +1,2 @@
+anthropic>=0.18.0
+geopy>=2.4.0
