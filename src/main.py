@@ -124,6 +124,43 @@ class WhereTheyWalked:
         """
         Check if notable relatives are already in the family tree.
         If so, link to them by ID instead of treating as external notable.
+
+        CURRENT BEHAVIOR:
+        - Matches notable relatives by name against tree members
+        - Adds `in_tree: True` and `tree_id` to link them
+        - Does NOT merge information - just creates the link
+
+        FUTURE ENHANCEMENT (requires careful testing):
+        A more advanced version could merge discovered information:
+
+        1. CROSS-REFERENCE MENTIONS: When ancestor A's research mentions
+           ancestor B (who is in tree), collect those mentions and compare
+           with B's own research results.
+
+        2. INFORMATION MERGING: If A's research reveals new facts about B
+           that B's own research didn't find, those could be added to B's
+           profile with source attribution.
+
+        3. CONFLICT DETECTION: When A says something about B that conflicts
+           with B's own research (different dates, places, etc.), flag for
+           manual review rather than auto-merging.
+
+        4. SAFEGUARDS NEEDED:
+           - Confidence scoring for merged info
+           - Clear source attribution ("discovered via John Bowne's research")
+           - Conflict flagging with diff display
+           - Rollback capability
+           - Name disambiguation (John Winthrop Sr vs Jr)
+           - Circular reference prevention
+
+        5. TESTING REQUIRED:
+           - Unit tests for name matching edge cases
+           - Integration tests with known family trees
+           - Manual review of merge quality on real data
+           - Performance testing with large trees (500+ individuals)
+
+        For now, linking without merging is safer and still valuable -
+        users can manually compare linked profiles.
         """
         # Build a lookup of all individuals by normalized name
         name_to_individual = {}
