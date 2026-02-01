@@ -332,7 +332,9 @@ class LocationProcessor:
         Enrich locations with search and geocoding.
         Only searches for types that benefit from rich data.
         """
-        for loc_id, location in self.locations.items():
+        # Iterate over a copy of keys since chain-following may add new locations
+        for loc_id in list(self.locations.keys()):
+            location = self.locations[loc_id]
             if verbose:
                 print(f"Processing: {location.name} ({location.type})")
             
