@@ -34,6 +34,7 @@ env/
 
 # Output files (keep test_results.json as example)
 output.json
+notable_results.json
 test_locations.geojson
 
 # Environment
