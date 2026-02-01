@@ -41,3 +41,4 @@ test_locations.geojson
 # Environment
 .env
 .env.local
+full_system_test_results.json
