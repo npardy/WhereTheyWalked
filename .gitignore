@@ -32,9 +32,10 @@ env/
 *.swp
 *.swo
 
-# Output files (keep test_results.json as example)
+# Output files
 output.json
 notable_results.json
+test_results.json
 test_locations.geojson
 
 # Environment
