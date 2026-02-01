@@ -344,29 +344,45 @@ class LocationProcessor:
             if not location.coordinates and self.geocode_fn:
                 self._geocode_location(location, verbose)
     
-    def _enrich_with_search(self, location: Location, verbose: bool = False, 
-                             _depth: int = 0, _max_depth: int = 5) -> None:
+    def _enrich_with_search(self, location: Location, verbose: bool = False,
+                             _depth: int = 0, _max_depth: int = 5,
+                             _visited: set = None) -> None:
         """
         Enrich a location with search and synthesis.
-        Follows relocation chains (moved_to) up to _max_depth.
+        Follows relocation chains (moved_to) and related sites up to _max_depth.
+
+        Args:
+            location: Location to enrich
+            verbose: Print progress
+            _depth: Current recursion depth
+            _max_depth: Max recursion depth for chain-following
+            _visited: Set of already-visited location IDs to prevent cycles
         """
         if not self.search_fn or not self.synthesize_fn:
             return
-        
+
+        # Track visited locations to prevent cycles
+        if _visited is None:
+            _visited = set()
+
+        if location.id in _visited:
+            return
+        _visited.add(location.id)
+
         # Prevent infinite loops
         if _depth >= _max_depth:
             if verbose:
-                print(f"  Max relocation depth reached for {location.name}")
+                print(f"  Max depth reached for {location.name}")
             location.needs_verification = True
             return
-        
+
         # Build search query
         query_parts = [f'"{location.name}"']
         if location.original_city:
             query_parts.append(location.original_city)
         if location.original_region:
             query_parts.append(location.original_region)
-        
+
         # Add type-specific terms
         if location.type == "cemetery":
             query_parts.append("cemetery history findagrave")
@@ -376,23 +392,23 @@ class LocationProcessor:
             query_parts.append("museum historic site visiting")
         elif location.type == "historic_house":
             query_parts.append("historic house tours visiting")
-        
+
         query = " ".join(query_parts)
-        
+
         if verbose:
             print(f"  Searching: {query[:60]}...")
-        
+
         # Search
         search_results = self.search_fn(query)
-        
+
         if not search_results or len(search_results) < 50:
             location.needs_verification = True
             return
-        
+
         # Extract URLs
         urls = re.findall(r'https?://[^\s\])<>"]+', search_results)
         location.source_urls = list(set(urls))[:5]
-        
+
         # Synthesize
         synthesis = self._synthesize_location(location, search_results)
         self._apply_location_synthesis(location, synthesis)
@@ -459,7 +475,106 @@ class LocationProcessor:
                     location.needs_verification = True
                     if verbose:
                         print(f"  → Destination {moved_to_name} status: {dest_location.status}")
-    
+
+        # Chain-follow related sites if they're significant historic locations
+        if location.related_sites and _depth < _max_depth - 1:
+            self._enrich_related_sites(location, verbose, _depth, _max_depth, _visited)
+
+    def _enrich_related_sites(self, location: Location, verbose: bool,
+                               _depth: int, _max_depth: int, _visited: set) -> None:
+        """
+        Chain-follow and enrich significant related sites discovered during location search.
+
+        Only follows sites that are:
+        - Historic houses, museums, churches, or cemeteries
+        - Not already in our location database
+        - Have a meaningful relationship to the original location
+        """
+        if not location.related_sites:
+            return
+
+        # Relationship types that indicate a site worth following
+        significant_relationships = [
+            'original location', 'sister church', 'founder also built', 'same founder',
+            'related historic site', 'nearby historic site', 'memorial', 'museum',
+            'historic home', 'burial site', 'meeting house', 'headquarters'
+        ]
+
+        for site_info in location.related_sites:
+            if not isinstance(site_info, dict):
+                continue
+
+            site_name = site_info.get('name', '').strip()
+            relationship = site_info.get('relationship', '').lower()
+
+            if not site_name:
+                continue
+
+            # Check if this is a significant relationship worth following
+            is_significant = any(sig in relationship for sig in significant_relationships)
+
+            # Also check if the name suggests a historic location
+            name_lower = site_name.lower()
+            is_historic_type = any(t in name_lower for t in [
+                'house', 'museum', 'church', 'meeting house', 'cemetery',
+                'historic', 'memorial', 'monument', 'site'
+            ])
+
+            if not (is_significant or is_historic_type):
+                continue
+
+            # Generate ID to check if we already have this location
+            related_id = self._generate_location_id(site_name, location.original_city, location.original_region)
+
+            # Skip if already in our database or visited
+            if related_id in self.locations or related_id in _visited:
+                # But add a cross-reference
+                if related_id in self.locations:
+                    existing = self.locations[related_id]
+                    if location.id not in [r.get('id') for r in existing.related_sites if isinstance(r, dict)]:
+                        existing.related_sites.append({
+                            'name': location.name,
+                            'relationship': 'related to ' + relationship,
+                            'note': f'Discovered from {location.name}'
+                        })
+                continue
+
+            if verbose:
+                print(f"  → Following related site: {site_name}")
+
+            # Infer type from name
+            related_type = self._infer_location_type(site_name, relationship)
+
+            # Create new location for related site
+            related_location = Location(
+                id=related_id,
+                name=site_name,
+                type=related_type,
+                original_name=site_name,
+                original_city=location.original_city,
+                original_region=location.original_region,
+                original_country=location.original_country
+            )
+
+            # Add cross-reference back to original location
+            related_location.related_sites.append({
+                'name': location.name,
+                'relationship': 'discovered from',
+                'note': f'Related: {relationship}'
+            })
+
+            # Add to our locations database
+            self.locations[related_id] = related_location
+
+            # Recursively enrich (at increased depth)
+            self._enrich_with_search(
+                related_location, verbose, _depth + 1, _max_depth, _visited
+            )
+
+            # Geocode if needed
+            if not related_location.coordinates and self.geocode_fn:
+                self._geocode_location(related_location, verbose)
+
     def _synthesize_location(self, location: Location, search_results: str) -> dict:
         """Synthesize location data from search results."""
         prompt = f"""Analyze these search results about a historic location and extract ALL contextually relevant information.

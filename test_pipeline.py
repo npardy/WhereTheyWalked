@@ -128,6 +128,18 @@ def run_test(gedcom_path: str, num_ancestors: int = 5, use_mock: bool = False):
     loc_stats = app.process_locations(verbose=True)
     print()
 
+    # Process events
+    print("Processing events...")
+    print("-" * 40)
+    event_stats = app.process_events(verbose=True, chain_follow=True)
+    print()
+
+    # Cross-link entities
+    print("Cross-linking entities...")
+    print("-" * 40)
+    link_stats = app.cross_link_entities(verbose=True)
+    print()
+
     # Summary
     print("=" * 60)
     print("SUMMARY")
@@ -152,6 +164,19 @@ def run_test(gedcom_path: str, num_ancestors: int = 5, use_mock: bool = False):
         if loc_stats.get('by_type'):
             print(f"  By type:            {loc_stats['by_type']}")
 
+    if event_stats:
+        print(f"\nEvents:")
+        print(f"  Total found:        {event_stats.get('total_events', 0)}")
+        print(f"  Enriched:           {event_stats.get('enriched', 0)}")
+        print(f"  Chain-followed:     {event_stats.get('chain_followed', 0)}")
+        if event_stats.get('by_type'):
+            print(f"  By type:            {event_stats['by_type']}")
+
+    if link_stats:
+        print(f"\nCross-links:")
+        print(f"  Event→Location:     {link_stats.get('event_location_links', 0)}")
+        print(f"  Location→Event:     {link_stats.get('location_event_links', 0)}")
+
     # Show notable ancestors
     notable = app.get_notable_ancestors()
     if notable:
@@ -166,6 +191,14 @@ def run_test(gedcom_path: str, num_ancestors: int = 5, use_mock: bool = False):
         for loc in shared[:5]:
             names = [c['person_name'] for c in loc['ancestor_connections']]
             print(f"  - {loc['name']}: {', '.join(names)}")
+
+    # Show shared events
+    shared_events = app.get_shared_events(min_ancestors=2)
+    if shared_events:
+        print(f"\nShared Events (multiple ancestors):")
+        for evt in shared_events[:5]:
+            names = [c['person_name'] for c in evt['ancestor_connections']]
+            print(f"  - {evt['name']}: {', '.join(names)}")
 
     # Export results
     output_json = "test_results.json"

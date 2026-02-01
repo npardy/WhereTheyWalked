@@ -276,9 +276,16 @@ class EventProcessor:
 
         return 'participant'
 
-    def enrich_events(self, verbose: bool = False) -> dict:
+    def enrich_events(self, verbose: bool = False, chain_follow: bool = True,
+                       max_depth: int = 3) -> dict:
         """
         Enrich all events with dedicated searches.
+        Optionally chain-follows related events discovered during enrichment.
+
+        Args:
+            verbose: Print progress
+            chain_follow: If True, also search and enrich related events discovered
+            max_depth: Maximum chain-following depth
 
         Returns:
             Stats about enrichment
@@ -289,11 +296,23 @@ class EventProcessor:
         stats = {
             "total_events": len(self.events),
             "enriched": 0,
+            "chain_followed": 0,
             "by_type": {}
         }
 
-        for event_id, event in self.events.items():
-            if event.is_enriched:
+        # Track visited to prevent cycles
+        visited = set()
+
+        # Get initial event list (may grow during chain-following)
+        events_to_process = list(self.events.keys())
+
+        for event_id in events_to_process:
+            if event_id in visited:
+                continue
+
+            event = self.events.get(event_id)
+            if not event or event.is_enriched:
+                visited.add(event_id)
                 continue
 
             if verbose:
@@ -302,17 +321,107 @@ class EventProcessor:
             try:
                 self._enrich_single_event(event, verbose)
                 event.is_enriched = True
+                visited.add(event_id)
                 stats["enriched"] += 1
 
                 # Track by type
                 etype = event.event_type
                 stats["by_type"][etype] = stats["by_type"].get(etype, 0) + 1
 
+                # Chain-follow related events if enabled
+                if chain_follow and event.related_events:
+                    new_events = self._chain_follow_related_events(
+                        event, visited, verbose, depth=1, max_depth=max_depth
+                    )
+                    stats["chain_followed"] += new_events
+
             except Exception as e:
                 if verbose:
                     print(f"    Error enriching {event.name}: {e}")
 
+        stats["total_events"] = len(self.events)
         return stats
+
+    def _chain_follow_related_events(self, source_event: HistoricEvent, visited: set,
+                                      verbose: bool, depth: int, max_depth: int) -> int:
+        """
+        Chain-follow and enrich related events discovered during event search.
+
+        Args:
+            source_event: The event whose related_events we're following
+            visited: Set of already-visited event IDs
+            verbose: Print progress
+            depth: Current recursion depth
+            max_depth: Maximum recursion depth
+
+        Returns:
+            Number of new events added and enriched
+        """
+        if depth >= max_depth:
+            return 0
+
+        new_events_count = 0
+
+        for related_name in source_event.related_events:
+            if not isinstance(related_name, str) or not related_name.strip():
+                continue
+
+            related_name = related_name.strip()
+
+            # Check if this matches a known event
+            known = self._match_known_event(related_name)
+
+            # Generate ID for the related event
+            year = known.get('year') if known else None
+            event_id = self._generate_event_id(related_name, year)
+
+            # Skip if already exists or visited
+            if event_id in self.events or event_id in visited:
+                # Add cross-reference if already exists
+                if event_id in self.events:
+                    existing = self.events[event_id]
+                    if source_event.id not in existing.related_events:
+                        existing.related_events.append(source_event.name)
+                continue
+
+            if verbose:
+                print(f"    → Following related event: {related_name}")
+
+            # Create new event
+            new_event = HistoricEvent(
+                id=event_id,
+                name=known['name'] if known else related_name,
+                event_type=known.get('event_type', 'other') if known else 'other',
+                year=known.get('year') if known else None,
+                end_year=known.get('end_year') if known else None,
+                location=known.get('location') if known else None,
+                historical_significance=known.get('significance') if known else None
+            )
+
+            # Add cross-reference back to source
+            new_event.related_events.append(source_event.name)
+
+            # Add to events database
+            self.events[event_id] = new_event
+            new_events_count += 1
+
+            # Enrich the new event
+            try:
+                self._enrich_single_event(new_event, verbose)
+                new_event.is_enriched = True
+                visited.add(event_id)
+
+                # Recursively follow its related events
+                if new_event.related_events and depth + 1 < max_depth:
+                    new_events_count += self._chain_follow_related_events(
+                        new_event, visited, verbose, depth + 1, max_depth
+                    )
+
+            except Exception as e:
+                if verbose:
+                    print(f"      Error enriching {related_name}: {e}")
+
+        return new_events_count
 
     def _enrich_single_event(self, event: HistoricEvent, verbose: bool = False):
         """Enrich a single event with search and synthesis."""
