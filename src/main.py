@@ -16,6 +16,7 @@ from .search import (
     create_serpapi_search,
     create_brave_search,
     create_auto_search,
+    create_combined_search,
     create_mock_search,
     create_deep_search,
     get_available_providers
@@ -560,6 +561,7 @@ def create_app(search_provider: str = "auto",
             - "auto": Automatically select based on available API keys
             - "serpapi": Use SerpAPI (requires SERPAPI_KEY)
             - "brave": Use Brave Search (requires BRAVE_API_KEY)
+            - "combined": Use both SerpAPI + Brave, deduplicated (best coverage)
             - "mock": Use mock search (for testing)
         use_mock: If True, use mock functions for both search and synthesis
         deep_search: If True, fetch full page content from top URLs (more thorough)
@@ -610,6 +612,10 @@ def create_app(search_provider: str = "auto",
             search_fn = create_brave_search()
             if verbose:
                 print("Using Brave Search")
+        elif search_provider == "combined":
+            search_fn = create_combined_search()
+            if verbose:
+                print("Using combined search (SerpAPI + Brave, deduplicated)")
         else:
             raise ValueError(f"Unknown search provider: {search_provider}")
 
