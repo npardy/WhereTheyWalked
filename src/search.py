@@ -308,6 +308,124 @@ def create_auto_search(prefer: str = "serpapi") -> Optional[Callable[[str], str]
     return None
 
 
+def create_combined_search(timeout: int = 30) -> Callable[[str], str]:
+    """
+    Create a search function that combines results from both SerpAPI and Brave.
+
+    Runs both searches, dedupes by URL, and combines unique results.
+    This provides better coverage at slightly higher cost.
+
+    Args:
+        timeout: Request timeout in seconds per provider
+
+    Returns:
+        Function(query) -> combined deduped search results text
+
+    Raises:
+        ValueError: If neither API key is configured
+    """
+    import re
+
+    serpapi_key = os.environ.get("SERPAPI_KEY")
+    brave_key = os.environ.get("BRAVE_API_KEY")
+
+    if not serpapi_key and not brave_key:
+        raise ValueError("At least one search API key required (SERPAPI_KEY or BRAVE_API_KEY)")
+
+    # Create individual search functions
+    serp_search = None
+    brave_search = None
+
+    if serpapi_key:
+        serp_search = create_serpapi_search(serpapi_key, timeout=timeout)
+    if brave_key:
+        brave_search = create_brave_search(brave_key, timeout=timeout)
+
+    def _parse_results(text: str) -> list[dict]:
+        """Parse search results text into structured list."""
+        results = []
+        current = {}
+
+        for line in text.split('\n'):
+            line = line.strip()
+            if not line:
+                if current and current.get('url'):
+                    results.append(current)
+                current = {}
+            elif line.startswith('[') and ']' in line:
+                # New result: [1] Title
+                if current and current.get('url'):
+                    results.append(current)
+                title = line.split(']', 1)[1].strip() if ']' in line else line
+                current = {'title': title}
+            elif line.startswith('URL:'):
+                current['url'] = line[4:].strip()
+            elif line.startswith('Snippet:'):
+                current['snippet'] = line[8:].strip()
+            elif current and 'snippet' not in current and not line.startswith('=='):
+                # Additional content for snippet
+                current['snippet'] = current.get('snippet', '') + ' ' + line
+
+        # Don't forget last result
+        if current and current.get('url'):
+            results.append(current)
+
+        return results
+
+    def _format_results(results: list[dict]) -> str:
+        """Format deduped results back to text."""
+        lines = ["== Combined Search Results ==\n"]
+        for i, r in enumerate(results, 1):
+            lines.append(f"[{i}] {r.get('title', 'No title')}")
+            lines.append(f"URL: {r.get('url', '')}")
+            if r.get('snippet'):
+                lines.append(f"Snippet: {r['snippet']}")
+            if r.get('source'):
+                lines.append(f"Source: {r['source']}")
+            lines.append("")
+        return "\n".join(lines)
+
+    def combined_search(query: str) -> str:
+        """Run both searches, dedupe by URL, combine results."""
+        all_results = []
+        seen_urls = set()
+
+        # Run SerpAPI first (more reliable)
+        if serp_search:
+            try:
+                serp_text = serp_search(query)
+                for r in _parse_results(serp_text):
+                    url = r.get('url', '').lower().rstrip('/')
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        r['source'] = 'Google'
+                        all_results.append(r)
+            except SearchError:
+                pass  # Continue with Brave
+
+        # Run Brave (may hit rate limits)
+        if brave_search:
+            try:
+                # Small delay to avoid rate limits
+                time.sleep(0.5)
+                brave_text = brave_search(query)
+                for r in _parse_results(brave_text):
+                    url = r.get('url', '').lower().rstrip('/')
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        r['source'] = 'Brave'
+                        all_results.append(r)
+            except SearchError:
+                pass  # Continue with what we have
+
+        if not all_results:
+            return "No search results found."
+
+        return _format_results(all_results)
+
+    return combined_search
+
+
 def get_available_providers() -> list[str]:
     """
     Get list of search providers with configured API keys.

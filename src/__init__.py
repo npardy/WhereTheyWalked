@@ -25,6 +25,7 @@ from .search import (
     create_serpapi_search,
     create_brave_search,
     create_auto_search,
+    create_combined_search,
     create_mock_search,
     get_available_providers,
     SearchError
@@ -54,6 +55,7 @@ __all__ = [
     "create_serpapi_search",
     "create_brave_search",
     "create_auto_search",
+    "create_combined_search",
     "create_mock_search",
     "get_available_providers",
     "SearchError",
