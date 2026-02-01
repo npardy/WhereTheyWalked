@@ -227,10 +227,10 @@ class WhereTheyWalked:
         if not self.research_results:
             return {"error": "No research results. Run research_ancestors() first."}
         
-        # Extract locations from research results
+        # Extract locations from research results (normalizes places for deduplication)
         result_dicts = [r.to_dict() for r in self.research_results.values()]
-        self.location_processor.extract_locations_from_research(result_dicts)
-        
+        self.location_processor.extract_locations_from_research(result_dicts, verbose=verbose)
+
         if verbose:
             print(f"Extracted {len(self.location_processor.locations)} unique locations")
         

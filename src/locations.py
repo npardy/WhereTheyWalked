@@ -159,6 +159,9 @@ class LocationProcessor:
         self.synthesize_fn = synthesize_fn
         self.geocode_fn = geocode_fn
         self.locations: dict[str, Location] = {}
+
+        # Cache for normalized place strings: raw_place -> normalized_place
+        self._normalized_place_cache: dict[str, str] = {}
     
     def _generate_location_id(self, name: str, city: str, region: str) -> str:
         """Generate consistent ID for deduplication.
@@ -169,7 +172,151 @@ class LocationProcessor:
         """
         key = f"{name.lower().strip()}|{city.lower().strip()}|{region.lower().strip()}"
         return hashlib.md5(key.encode()).hexdigest()[:12]
-    
+
+    def normalize_place(self, place: str, verbose: bool = False) -> str:
+        """
+        Normalize a place string to consistent format using AI.
+
+        Converts variations like:
+        - "Chatham, Barnstable, MA" -> "Chatham, Massachusetts, USA"
+        - "Chatham, Mass." -> "Chatham, Massachusetts, USA"
+        - "London, England" -> "London, England, United Kingdom"
+
+        Uses caching to avoid redundant AI calls.
+
+        Args:
+            place: Raw place string from GEDCOM or other source
+            verbose: Print debug info
+
+        Returns:
+            Normalized place string in format "City, State/Province, Country"
+        """
+        if not place or not place.strip():
+            return ""
+
+        place = place.strip()
+
+        # Check cache first
+        if place in self._normalized_place_cache:
+            return self._normalized_place_cache[place]
+
+        # If no synthesize_fn, cache and return as-is
+        if not self.synthesize_fn:
+            self._normalized_place_cache[place] = place
+            return place
+
+        # Use AI to normalize
+        prompt = f'''Normalize this place name to a consistent format: "{place}"
+
+Return ONLY the normalized place in format: City, State/Province (full name), Country
+- Use full state/province names (Massachusetts, not MA; Ontario, not ON)
+- Always include country
+- For US places, use "USA" as country
+- If a county is included, use only the city and state/province, not the county
+- Return just the normalized string, no explanation
+
+Examples:
+- "Chatham, Barnstable, MA" -> "Chatham, Massachusetts, USA"
+- "London, England" -> "London, England, United Kingdom"
+- "Paris, France" -> "Paris, Île-de-France, France"
+- "Sydney, NSW, Australia" -> "Sydney, New South Wales, Australia"
+'''
+
+        try:
+            normalized = self.synthesize_fn(prompt)
+            if normalized:
+                normalized = normalized.strip().strip('"').strip("'")
+                # Validate format (should have at least one comma)
+                if "," in normalized:
+                    self._normalized_place_cache[place] = normalized
+                    if verbose:
+                        print(f"  Normalized: '{place}' -> '{normalized}'")
+                    return normalized
+        except Exception as e:
+            if verbose:
+                print(f"  Warning: Failed to normalize '{place}': {e}")
+
+        # Fallback: cache original and return
+        self._normalized_place_cache[place] = place
+        return place
+
+    def normalize_places_batch(self, places: list[str], verbose: bool = False) -> dict[str, str]:
+        """
+        Normalize multiple places at once for efficiency.
+
+        Args:
+            places: List of place strings to normalize
+            verbose: Print debug info
+
+        Returns:
+            Dict mapping original place -> normalized place
+        """
+        results = {}
+
+        # First, check cache and find what's missing
+        missing = []
+        for place in places:
+            place = place.strip() if place else ""
+            if not place:
+                results[place] = ""
+            elif place in self._normalized_place_cache:
+                results[place] = self._normalized_place_cache[place]
+            else:
+                missing.append(place)
+
+        if not missing or not self.synthesize_fn:
+            # All cached or no AI available
+            for place in missing:
+                results[place] = place
+                self._normalized_place_cache[place] = place
+            return results
+
+        # Batch normalize with AI
+        places_list = "\n".join(f"- {p}" for p in missing)
+        prompt = f'''Normalize these place names to a consistent format:
+
+{places_list}
+
+For each place, return the normalized version in format: City, State/Province (full name), Country
+- Use full state/province names (Massachusetts, not MA; Ontario, not ON)
+- Always include country
+- For US places, use "USA" as country
+- If a county is included, use only the city and state/province, not the county
+
+Return a JSON object mapping original -> normalized, like:
+{{"Chatham, Barnstable, MA": "Chatham, Massachusetts, USA", "London, England": "London, England, United Kingdom"}}
+'''
+
+        try:
+            response = self.synthesize_fn(prompt)
+            if response:
+                # Extract JSON from response
+                import json
+                # Try to find JSON in response
+                start = response.find("{")
+                end = response.rfind("}") + 1
+                if start >= 0 and end > start:
+                    json_str = response[start:end]
+                    normalized_map = json.loads(json_str)
+
+                    for orig, norm in normalized_map.items():
+                        if orig in missing and isinstance(norm, str) and "," in norm:
+                            results[orig] = norm.strip()
+                            self._normalized_place_cache[orig] = norm.strip()
+                            if verbose:
+                                print(f"  Normalized: '{orig}' -> '{norm}'")
+        except Exception as e:
+            if verbose:
+                print(f"  Warning: Batch normalization failed: {e}")
+
+        # Fill in any still-missing with originals
+        for place in missing:
+            if place not in results:
+                results[place] = place
+                self._normalized_place_cache[place] = place
+
+        return results
+
     def _normalize_location_name(self, name: str) -> str:
         """Normalize location name for matching."""
         name = name.lower().strip()
@@ -294,13 +441,36 @@ class LocationProcessor:
 
         return result
     
-    def extract_locations_from_research(self, research_results: list) -> None:
+    def extract_locations_from_research(self, research_results: list, verbose: bool = False) -> None:
         """
         Extract and dedupe locations from research results.
-        
+
+        Pre-normalizes all unique place strings for efficient deduplication.
+        "Chatham, MA" and "Chatham, Massachusetts, USA" will be normalized
+        to the same format and create only one location entry.
+
         Args:
             research_results: List of ResearchResult objects/dicts
+            verbose: Print normalization debug info
         """
+        # First pass: collect all unique place strings for batch normalization
+        unique_places = set()
+        for result in research_results:
+            result_dict = result if isinstance(result, dict) else result.to_dict()
+            birth_place = result_dict.get("birth_place") or result_dict.get("birth_place_discovered")
+            death_place = result_dict.get("death_place") or result_dict.get("death_place_discovered")
+            if birth_place:
+                unique_places.add(birth_place.strip())
+            if death_place:
+                unique_places.add(death_place.strip())
+
+        # Batch normalize for efficiency (uses AI once for batch)
+        if unique_places:
+            if verbose:
+                print(f"Pre-normalizing {len(unique_places)} unique place strings...")
+            self.normalize_places_batch(list(unique_places), verbose=verbose)
+
+        # Now process each result (normalizations are cached)
         for result in research_results:
             if isinstance(result, dict):
                 result_dict = result
@@ -368,8 +538,15 @@ class LocationProcessor:
     def _add_location_from_place(self, place: str, person_id: str, person_name: str,
                                   relationship: str, year: int = None,
                                   event_description: str = None) -> None:
-        """Add location from a place string."""
-        parsed = self._parse_place_string(place)
+        """Add location from a place string.
+
+        Normalizes the place string before parsing to ensure consistent
+        deduplication. "Chatham, MA" and "Chatham, Massachusetts, USA"
+        will be normalized to the same format and get the same ID.
+        """
+        # Normalize place string BEFORE parsing for consistent deduplication
+        normalized = self.normalize_place(place)
+        parsed = self._parse_place_string(normalized)
 
         # Use relationship to determine type instead of keyword matching
         relationship_to_type = {
