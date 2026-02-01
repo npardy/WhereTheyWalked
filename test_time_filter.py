@@ -176,6 +176,8 @@ def test_time_period_propagation():
     print("=" * 60)
     print()
 
+    processor = LocationProcessor()
+
     # Create a location with ancestor connection
     parent_location = Location(
         id="parent",
@@ -191,10 +193,10 @@ def test_time_period_propagation():
         year=1763
     )
 
-    # Compute time period (as done in _enrich_with_search)
+    # Compute time period using the helper method
     years = [c.year for c in parent_location.ancestor_connections if c.year]
-    if years:
-        parent_location.relevant_time_period = (min(years) - 20, max(years) + 30)
+    relationships = [c.relationship for c in parent_location.ancestor_connections]
+    parent_location.relevant_time_period = processor._compute_time_period(years, relationships)
 
     print(f"Parent location: {parent_location.name}")
     print(f"Computed time period: {parent_location.relevant_time_period}")
@@ -280,12 +282,81 @@ def test_synthesis_prompt_context():
     return True
 
 
+def test_time_period_with_missing_death():
+    """Test that time period is calculated correctly when death year is missing."""
+    print()
+    print("=" * 60)
+    print("TEST: Time-Period with Missing Death Year")
+    print("=" * 60)
+    print()
+
+    processor = LocationProcessor()
+
+    # Test 1: Only birth year known (common for early ancestors)
+    print("Test 1: Only birth year (1701)")
+    years_birth_only = [1701]
+    relationships_birth = ["born_at"]
+    time_period = processor._compute_time_period(years_birth_only, relationships_birth)
+    print(f"  Input: years={years_birth_only}, relationships={relationships_birth}")
+    print(f"  Computed: {time_period}")
+
+    # Should estimate death as birth + 75 = 1776
+    # So range should be roughly (1681, 1806) with buffers
+    expected_min = 1701 - 20  # 1681
+    expected_max = 1701 + 75 + 30  # 1806
+    if time_period and time_period[0] == expected_min and time_period[1] == expected_max:
+        print(f"  ✓ PASS: Correctly estimated lifespan (max={time_period[1]})")
+        test1_pass = True
+    else:
+        print(f"  ✗ FAIL: Expected ({expected_min}, {expected_max})")
+        test1_pass = False
+
+    # Test 2: Only death year known
+    print("\nTest 2: Only death year (1763)")
+    years_death_only = [1763]
+    relationships_death = ["died_at"]
+    time_period = processor._compute_time_period(years_death_only, relationships_death)
+    print(f"  Input: years={years_death_only}, relationships={relationships_death}")
+    print(f"  Computed: {time_period}")
+
+    # Should estimate birth as death - 75 = 1688
+    # So range should be roughly (1668, 1793) with buffers
+    expected_min = 1763 - 75 - 20  # 1668
+    expected_max = 1763 + 30  # 1793
+    if time_period and time_period[0] == expected_min and time_period[1] == expected_max:
+        print(f"  ✓ PASS: Correctly estimated birth (min={time_period[0]})")
+        test2_pass = True
+    else:
+        print(f"  ✗ FAIL: Expected ({expected_min}, {expected_max})")
+        test2_pass = False
+
+    # Test 3: Both birth and death years known
+    print("\nTest 3: Both birth (1701) and death (1763) years")
+    years_both = [1701, 1763]
+    relationships_both = ["born_at", "died_at"]
+    time_period = processor._compute_time_period(years_both, relationships_both)
+    print(f"  Input: years={years_both}, relationships={relationships_both}")
+    print(f"  Computed: {time_period}")
+
+    expected_min = 1701 - 20  # 1681
+    expected_max = 1763 + 30  # 1793
+    if time_period and time_period[0] == expected_min and time_period[1] == expected_max:
+        print(f"  ✓ PASS: Uses actual dates")
+        test3_pass = True
+    else:
+        print(f"  ✗ FAIL: Expected ({expected_min}, {expected_max})")
+        test3_pass = False
+
+    return test1_pass and test2_pass and test3_pass
+
+
 if __name__ == "__main__":
     all_passed = True
 
     all_passed &= test_time_period_filtering()
     all_passed &= test_time_period_propagation()
     all_passed &= test_synthesis_prompt_context()
+    all_passed &= test_time_period_with_missing_death()
 
     print()
     print("=" * 60)

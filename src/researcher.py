@@ -415,12 +415,17 @@ CRITICAL INSTRUCTIONS:
 2. Extract ALL notable relatives or connections to famous people (parents, stepparents, spouses, in-laws)
 3. Look for contributions to history (religious freedom, founding documents, military service)
 4. Identify specific roles they played (signed documents, advocated for causes, testified at trials)
+5. NORMALIZE ALL PLACE NAMES to consistent format: "City, State/Province (full name), Country"
+   - Use full state/province names (Massachusetts, not MA; Ontario, not ON)
+   - Always include country
+   - Examples: "Chatham, Massachusetts, USA" not "Chatham, Barnstable, MA"
+   - Examples: "London, England, UK" not "London"
 
 {{
     "birth_year_discovered": year or null,
     "death_year_discovered": year or null,
-    "birth_place_discovered": "place" or null,
-    "death_place_discovered": "place" or null,
+    "birth_place_discovered": "City, State/Province, Country" or null,
+    "death_place_discovered": "City, State/Province, Country" or null,
     "discovered_from": "source URL" or null,
 
     "biography": "200-400 word detailed biographical summary. Include ALL specific facts: roles, achievements, family connections, historical involvement. Be comprehensive.",
@@ -434,7 +439,7 @@ CRITICAL INSTRUCTIONS:
 
     "migration_path": [
         {{
-            "place": "Place name (city, region)",
+            "place": "City, State/Province, Country (normalized format)",
             "year_arrived": year or null,
             "year_left": year or null,
             "reason": "Why they moved here or left (immigration, religious freedom, land, marriage, death, etc.)",
@@ -466,7 +471,8 @@ CRITICAL INSTRUCTIONS:
 
     "locations": [
         {{
-            "name": "Name of place",
+            "name": "Specific place name (e.g., 'Old First Church', 'Nickerson Cemetery')",
+            "normalized_place": "City, State/Province, Country (e.g., 'Chatham, Massachusetts, USA')",
             "type": "birthplace/deathplace/burial_site/cemetery/church/meeting_house/museum/historic_house/historic_site/memorial/settlement/colony/port/courthouse/battlefield/farm/mill/trading_post/immigration_point/residence/other",
             "address": "Street address if found",
             "description": "Why this location is significant to this ancestor",

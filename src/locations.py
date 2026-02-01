@@ -161,7 +161,12 @@ class LocationProcessor:
         self.locations: dict[str, Location] = {}
     
     def _generate_location_id(self, name: str, city: str, region: str) -> str:
-        """Generate consistent ID for deduplication."""
+        """Generate consistent ID for deduplication.
+
+        Note: AI synthesis should now normalize place names, so simple lowercase
+        comparison should work. If duplicates still occur, they'll be merged
+        after geocoding based on coordinates.
+        """
         key = f"{name.lower().strip()}|{city.lower().strip()}|{region.lower().strip()}"
         return hashlib.md5(key.encode()).hexdigest()[:12]
     
@@ -197,31 +202,96 @@ class LocationProcessor:
             return "residence"
         
         return "other"
-    
+
+    def _compute_time_period(self, years: list, relationships: list = None) -> tuple:
+        """
+        Compute relevant time period from ancestor connection years.
+
+        Args:
+            years: List of years from ancestor connections
+            relationships: List of relationship types (born_at, died_at, etc.)
+
+        Returns:
+            (min_year, max_year) tuple for filtering related sites
+
+        Logic:
+        - If we have both birth and death years, use those with buffers
+        - If we only have birth years, assume ~75 year lifespan
+        - If we only have death years, estimate birth ~75 years before
+        """
+        if not years:
+            return None
+
+        # Categorize years by relationship type if provided
+        birth_years = []
+        death_years = []
+        other_years = []
+
+        if relationships and len(relationships) == len(years):
+            for year, rel in zip(years, relationships):
+                if year:
+                    if 'born' in rel or 'birth' in rel:
+                        birth_years.append(year)
+                    elif 'died' in rel or 'death' in rel:
+                        death_years.append(year)
+                    else:
+                        other_years.append(year)
+        else:
+            other_years = [y for y in years if y]
+
+        # Calculate range
+        all_years = birth_years + death_years + other_years
+        if not all_years:
+            return None
+
+        min_year = min(all_years)
+        max_year = max(all_years)
+
+        # If we only have birth-type years, estimate death (+75 years)
+        if birth_years and not death_years:
+            estimated_death = max(birth_years) + 75
+            max_year = max(max_year, estimated_death)
+
+        # If we only have death-type years, estimate birth (-75 years)
+        if death_years and not birth_years:
+            estimated_birth = min(death_years) - 75
+            min_year = min(min_year, estimated_birth)
+
+        # Add buffers: 20 years before min, 30 years after max
+        return (min_year - 20, max_year + 30)
+
     def _parse_place_string(self, place: str) -> dict:
-        """Parse a place string into components."""
+        """Parse a place string into components.
+
+        AI synthesis should now normalize place names to "City, State/Province, Country"
+        format, so parsing is simpler. For legacy/GEDCOM data, we do best-effort parsing.
+        """
         if not place:
             return {"name": "", "city": "", "region": "", "country": ""}
-        
+
         parts = [p.strip() for p in place.split(",")]
-        
+
         result = {"name": "", "city": "", "region": "", "country": ""}
-        
+
         if len(parts) == 1:
             result["city"] = parts[0]
         elif len(parts) == 2:
+            # "City, Country" or "City, State"
             result["city"] = parts[0]
-            result["country"] = parts[1]
+            result["region"] = parts[1]
         elif len(parts) == 3:
+            # Expected normalized format: "City, State/Province, Country"
             result["city"] = parts[0]
             result["region"] = parts[1]
             result["country"] = parts[2]
         elif len(parts) >= 4:
-            result["name"] = parts[0]
-            result["city"] = parts[1]
+            # Could be "City, County, State, Country" or "Place, City, State, Country"
+            # Use last 3 parts as city, region, country
+            result["name"] = ", ".join(parts[:-3]) if len(parts) > 3 else ""
+            result["city"] = parts[-3]
             result["region"] = parts[-2]
             result["country"] = parts[-1]
-        
+
         return result
     
     def extract_locations_from_research(self, research_results: list) -> None:
@@ -260,21 +330,25 @@ class LocationProcessor:
             for loc in result_dict.get("locations", []):
                 if isinstance(loc, dict):
                     name = loc.get("name", "")
+                    # Use normalized_place for consistent deduplication
+                    normalized_place = loc.get("normalized_place", "")
                     loc_type = loc.get("type", "other")
                     address = loc.get("address", "")
                     description = loc.get("description", "")
                     coords = loc.get("coordinates")
-                    # New AI-provided fields
+                    # AI-provided fields
                     importance = loc.get("importance", "low")
                     should_enrich = loc.get("should_enrich", False)
                     loc_year = loc.get("year")
 
-                    if name:
+                    if name or normalized_place:
+                        # Parse normalized_place for city/region/country
+                        parsed = self._parse_place_string(normalized_place) if normalized_place else {}
                         self._add_location(
                             name=name,
-                            city="",  # Will be parsed from name/address
-                            region="",
-                            country="",
+                            city=parsed.get("city", ""),
+                            region=parsed.get("region", ""),
+                            country=parsed.get("country", ""),
                             loc_type=loc_type,
                             person_id=person_id,
                             person_name=person_name,
@@ -376,7 +450,17 @@ class LocationProcessor:
         Enrich locations with search and geocoding.
         Uses AI-determined should_enrich flag, falling back to type-based rules.
         """
-        # Iterate over a copy of keys since chain-following may add new locations
+        # First, geocode all locations to enable coordinate-based deduplication
+        if self.geocode_fn:
+            for loc_id in list(self.locations.keys()):
+                location = self.locations[loc_id]
+                if not location.coordinates:
+                    self._geocode_location(location, verbose)
+
+            # Merge duplicates based on coordinates
+            self._merge_duplicate_locations(verbose)
+
+        # Now enrich unique locations
         for loc_id in list(self.locations.keys()):
             location = self.locations[loc_id]
             if verbose:
@@ -395,9 +479,61 @@ class LocationProcessor:
             if should_search:
                 self._enrich_with_search(location, verbose)
 
-            # Geocode if we don't have coordinates
-            if not location.coordinates and self.geocode_fn:
-                self._geocode_location(location, verbose)
+    def _merge_duplicate_locations(self, verbose: bool = False) -> None:
+        """
+        Merge locations that have the same coordinates (within ~100m).
+        This handles cases where different place strings refer to the same location.
+        """
+        # Group locations by rounded coordinates
+        coord_groups = defaultdict(list)
+        for loc_id, location in self.locations.items():
+            if location.coordinates:
+                # Round to ~100m precision (0.001 degrees ≈ 111m)
+                rounded = (round(location.coordinates[0], 3), round(location.coordinates[1], 3))
+                coord_groups[rounded].append(loc_id)
+
+        # Merge groups with multiple locations
+        for coords, loc_ids in coord_groups.items():
+            if len(loc_ids) <= 1:
+                continue
+
+            if verbose:
+                names = [self.locations[lid].name for lid in loc_ids]
+                print(f"  Merging duplicates at {coords}: {names}")
+
+            # Keep the first location, merge others into it
+            primary_id = loc_ids[0]
+            primary = self.locations[primary_id]
+
+            for other_id in loc_ids[1:]:
+                other = self.locations[other_id]
+
+                # Merge ancestor connections
+                for conn in other.ancestor_connections:
+                    primary.add_connection(
+                        conn.person_id, conn.person_name, conn.relationship,
+                        conn.year, conn.event_description
+                    )
+
+                # Merge other data (prefer non-empty values)
+                if not primary.history and other.history:
+                    primary.history = other.history
+                if not primary.current_address and other.current_address:
+                    primary.current_address = other.current_address
+                primary.source_urls.extend(other.source_urls)
+                primary.related_sites.extend(other.related_sites)
+
+                # Upgrade importance if needed
+                if other.importance == "high":
+                    primary.importance = "high"
+                elif other.importance == "medium" and primary.importance == "low":
+                    primary.importance = "medium"
+
+                # Remove the duplicate
+                del self.locations[other_id]
+
+            if verbose:
+                print(f"    → Kept {primary.name} with {len(primary.ancestor_connections)} connections")
     
     def _enrich_with_search(self, location: Location, verbose: bool = False,
                              _depth: int = 0, _max_depth: int = 5,
@@ -427,8 +563,8 @@ class LocationProcessor:
         # Compute time period from ancestor connections (for filtering related sites)
         if location.ancestor_connections and not location.relevant_time_period:
             years = [c.year for c in location.ancestor_connections if c.year]
-            if years:
-                location.relevant_time_period = (min(years) - 20, max(years) + 30)
+            relationships = [c.relationship for c in location.ancestor_connections]
+            location.relevant_time_period = self._compute_time_period(years, relationships)
 
         # Prevent infinite loops
         if _depth >= _max_depth:
@@ -563,9 +699,14 @@ class LocationProcessor:
             'historic home', 'burial site', 'meeting house', 'headquarters'
         ]
 
-        # Determine the relevant time period from ancestor connections
-        ancestor_years = [c.year for c in location.ancestor_connections if c.year]
-        max_ancestor_year = max(ancestor_years) + 30 if ancestor_years else None
+        # Determine the relevant time period from ancestor connections or propagated value
+        if location.relevant_time_period:
+            _, max_ancestor_year = location.relevant_time_period
+        else:
+            years = [c.year for c in location.ancestor_connections if c.year]
+            relationships = [c.relationship for c in location.ancestor_connections]
+            time_period = self._compute_time_period(years, relationships)
+            max_ancestor_year = time_period[1] if time_period else None
 
         for site_info in location.related_sites:
             if not isinstance(site_info, dict):
