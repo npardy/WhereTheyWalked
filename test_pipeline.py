@@ -23,13 +23,13 @@ import json
 import sys
 import os
 
-# Add src directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from main import create_app, get_api_status, WhereTheyWalked
-from search import create_auto_search, create_mock_search, get_available_providers
-from researcher import create_anthropic_synthesizer
-from gedcom_parser import GedcomParser
+from src.main import create_app, get_api_status, WhereTheyWalked
+from src.search import create_auto_search, create_mock_search, get_available_providers
+from src.researcher import create_anthropic_synthesizer
+from src.gedcom_parser import GedcomParser
 
 
 def run_test(gedcom_path: str, num_ancestors: int = 5, use_mock: bool = False):

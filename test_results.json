@@ -1,98 +1,271 @@
-[
-  {
-    "individual_id": "@I152210140217@",
-    "full_name": "Hans Maybach",
-    "birth_year": 1414,
-    "death_year": 1461,
-    "birth_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
-    "death_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
-    "birth_year_discovered": null,
-    "death_year_discovered": null,
-    "birth_place_discovered": null,
-    "death_place_discovered": null,
-    "discovered_from": null,
-    "search_query": "\"Hans Maybach\" 1414 1461 Hall Baden-W\u00fcrttemberg",
-    "biography": "Placeholder - no API key",
-    "biography_short": null,
-    "notable": false,
-    "notable_reason": null,
-    "confidence": "low",
-    "locations": [],
-    "historic_events": [],
-    "occupation": null,
-    "migration_path": [],
-    "has_museum": false,
-    "has_cemetery": false,
-    "has_historic_site": false,
-    "mayflower_connection": false,
-    "military_service": false,
-    "needs_confirmation": false,
-    "confirmation_reason": null,
-    "timeline_validation": null,
-    "source_urls": []
+{
+  "generated_at": "2026-02-01T00:45:00.481629",
+  "version": "0.1.0",
+  "stats": {
+    "ancestors": {
+      "total_researched": 3,
+      "notable_count": 0,
+      "high_confidence": 0,
+      "medium_confidence": 0,
+      "low_confidence": 3,
+      "with_museum": 0,
+      "with_cemetery": 0,
+      "with_historic_site": 0,
+      "mayflower_connections": 0,
+      "military_service": 0
+    },
+    "locations": {
+      "total_locations": 1,
+      "by_type": {
+        "residence": 1
+      },
+      "by_status": {
+        "unknown": 1
+      },
+      "with_coordinates": 1,
+      "needs_verification": 0,
+      "shared_locations": 1
+    },
+    "timeline": {
+      "total_events": 0
+    }
   },
-  {
-    "individual_id": "@I152210140192@",
-    "full_name": "Seitz Maybach",
-    "birth_year": 1430,
-    "death_year": 1507,
-    "birth_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
-    "death_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
-    "birth_year_discovered": null,
-    "death_year_discovered": null,
-    "birth_place_discovered": null,
-    "death_place_discovered": null,
-    "discovered_from": null,
-    "search_query": "\"Seitz Maybach\" 1430 1507 Hall Baden-W\u00fcrttemberg",
-    "biography": "Placeholder - no API key",
-    "biography_short": null,
-    "notable": false,
-    "notable_reason": null,
-    "confidence": "low",
-    "locations": [],
-    "historic_events": [],
-    "occupation": null,
-    "migration_path": [],
-    "has_museum": false,
-    "has_cemetery": false,
-    "has_historic_site": false,
-    "mayflower_connection": false,
-    "military_service": false,
-    "needs_confirmation": false,
-    "confirmation_reason": null,
-    "timeline_validation": null,
-    "source_urls": []
+  "ancestors": [
+    {
+      "individual_id": "@I152210140217@",
+      "full_name": "Hans Maybach",
+      "birth_year": 1414,
+      "death_year": 1461,
+      "birth_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
+      "death_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
+      "birth_year_discovered": null,
+      "death_year_discovered": null,
+      "birth_place_discovered": null,
+      "death_place_discovered": null,
+      "discovered_from": null,
+      "search_query": "\"Hans Maybach\" 1414 1461 Hall Baden-W\u00fcrttemberg",
+      "biography": null,
+      "biography_short": null,
+      "notable": false,
+      "notable_reason": null,
+      "confidence": "low",
+      "locations": [],
+      "historic_events": [],
+      "occupation": null,
+      "migration_path": [],
+      "has_museum": false,
+      "has_cemetery": false,
+      "has_historic_site": false,
+      "mayflower_connection": false,
+      "military_service": false,
+      "needs_confirmation": false,
+      "confirmation_reason": null,
+      "timeline_validation": null,
+      "source_urls": []
+    },
+    {
+      "individual_id": "@I152210140192@",
+      "full_name": "Seitz Maybach",
+      "birth_year": 1430,
+      "death_year": 1507,
+      "birth_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
+      "death_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
+      "birth_year_discovered": null,
+      "death_year_discovered": null,
+      "birth_place_discovered": null,
+      "death_place_discovered": null,
+      "discovered_from": null,
+      "search_query": "\"Seitz Maybach\" 1430 1507 Hall Baden-W\u00fcrttemberg",
+      "biography": null,
+      "biography_short": null,
+      "notable": false,
+      "notable_reason": null,
+      "confidence": "low",
+      "locations": [],
+      "historic_events": [],
+      "occupation": null,
+      "migration_path": [],
+      "has_museum": false,
+      "has_cemetery": false,
+      "has_historic_site": false,
+      "mayflower_connection": false,
+      "military_service": false,
+      "needs_confirmation": false,
+      "confirmation_reason": null,
+      "timeline_validation": null,
+      "source_urls": []
+    },
+    {
+      "individual_id": "@I152210139260@",
+      "full_name": "Margaret Plattner",
+      "birth_year": 1450,
+      "death_year": 1537,
+      "birth_place": null,
+      "death_place": null,
+      "birth_year_discovered": null,
+      "death_year_discovered": null,
+      "birth_place_discovered": null,
+      "death_place_discovered": null,
+      "discovered_from": null,
+      "search_query": "\"Margaret Plattner\" 1450 1537",
+      "biography": null,
+      "biography_short": null,
+      "notable": false,
+      "notable_reason": null,
+      "confidence": "low",
+      "locations": [],
+      "historic_events": [],
+      "occupation": null,
+      "migration_path": [],
+      "has_museum": false,
+      "has_cemetery": false,
+      "has_historic_site": false,
+      "mayflower_connection": false,
+      "military_service": false,
+      "needs_confirmation": false,
+      "confirmation_reason": null,
+      "timeline_validation": null,
+      "source_urls": []
+    }
+  ],
+  "locations": {
+    "locations": {
+      "27e6df78f94b": {
+        "id": "27e6df78f94b",
+        "name": "Hall",
+        "type": "residence",
+        "original_name": "Hall",
+        "original_city": "Schw\u00e4bisch Hall",
+        "original_region": "Baden-W\u00fcrttemberg",
+        "original_country": "Deutschland",
+        "status": "unknown",
+        "status_details": null,
+        "moved_to": null,
+        "relocation_chain": [],
+        "final_destination": null,
+        "current_name": null,
+        "current_address": null,
+        "coordinates": [
+          49.1182957,
+          9.7836967
+        ],
+        "is_visitable": true,
+        "visit_notes": null,
+        "visitor_tips": null,
+        "history": null,
+        "historic_events": [],
+        "notable_connections": [],
+        "related_sites": [],
+        "ancestor_connections": [
+          {
+            "person_id": "@I152210140217@",
+            "person_name": "Hans Maybach",
+            "relationship": "born_at",
+            "year": 1414,
+            "event_description": "Born here"
+          },
+          {
+            "person_id": "@I152210140217@",
+            "person_name": "Hans Maybach",
+            "relationship": "died_at",
+            "year": 1461,
+            "event_description": "Died here"
+          },
+          {
+            "person_id": "@I152210140192@",
+            "person_name": "Seitz Maybach",
+            "relationship": "born_at",
+            "year": 1430,
+            "event_description": "Born here"
+          },
+          {
+            "person_id": "@I152210140192@",
+            "person_name": "Seitz Maybach",
+            "relationship": "died_at",
+            "year": 1507,
+            "event_description": "Died here"
+          }
+        ],
+        "source_urls": [],
+        "confidence": "low",
+        "needs_verification": false
+      }
+    },
+    "stats": {
+      "total_locations": 1,
+      "by_type": {
+        "residence": 1
+      },
+      "by_status": {
+        "unknown": 1
+      },
+      "with_coordinates": 1,
+      "needs_verification": 0,
+      "shared_locations": 1
+    }
   },
-  {
-    "individual_id": "@I152210139260@",
-    "full_name": "Margaret Plattner",
-    "birth_year": 1450,
-    "death_year": 1537,
-    "birth_place": null,
-    "death_place": null,
-    "birth_year_discovered": null,
-    "death_year_discovered": null,
-    "birth_place_discovered": null,
-    "death_place_discovered": null,
-    "discovered_from": null,
-    "search_query": "\"Margaret Plattner\" 1450 1537",
-    "biography": "Placeholder - no API key",
-    "biography_short": null,
-    "notable": false,
-    "notable_reason": null,
-    "confidence": "low",
-    "locations": [],
-    "historic_events": [],
-    "occupation": null,
-    "migration_path": [],
-    "has_museum": false,
-    "has_cemetery": false,
-    "has_historic_site": false,
-    "mayflower_connection": false,
-    "military_service": false,
-    "needs_confirmation": false,
-    "confirmation_reason": null,
-    "timeline_validation": null,
-    "source_urls": []
-  }
-]
+  "timeline": [],
+  "notable": [],
+  "shared_locations": [
+    {
+      "id": "27e6df78f94b",
+      "name": "Hall",
+      "type": "residence",
+      "original_name": "Hall",
+      "original_city": "Schw\u00e4bisch Hall",
+      "original_region": "Baden-W\u00fcrttemberg",
+      "original_country": "Deutschland",
+      "status": "unknown",
+      "status_details": null,
+      "moved_to": null,
+      "relocation_chain": [],
+      "final_destination": null,
+      "current_name": null,
+      "current_address": null,
+      "coordinates": [
+        49.1182957,
+        9.7836967
+      ],
+      "is_visitable": true,
+      "visit_notes": null,
+      "visitor_tips": null,
+      "history": null,
+      "historic_events": [],
+      "notable_connections": [],
+      "related_sites": [],
+      "ancestor_connections": [
+        {
+          "person_id": "@I152210140217@",
+          "person_name": "Hans Maybach",
+          "relationship": "born_at",
+          "year": 1414,
+          "event_description": "Born here"
+        },
+        {
+          "person_id": "@I152210140217@",
+          "person_name": "Hans Maybach",
+          "relationship": "died_at",
+          "year": 1461,
+          "event_description": "Died here"
+        },
+        {
+          "person_id": "@I152210140192@",
+          "person_name": "Seitz Maybach",
+          "relationship": "born_at",
+          "year": 1430,
+          "event_description": "Born here"
+        },
+        {
+          "person_id": "@I152210140192@",
+          "person_name": "Seitz Maybach",
+          "relationship": "died_at",
+          "year": 1507,
+          "event_description": "Died here"
+        }
+      ],
+      "source_urls": [],
+      "confidence": "low",
+      "needs_verification": false
+    }
+  ]
+}
