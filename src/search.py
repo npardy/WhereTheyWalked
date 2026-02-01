@@ -4,11 +4,17 @@ Search API Implementations for Where They Walked
 Provides web search functionality using various providers:
 - SerpAPI (Google Search)
 - Brave Search API
+- Combined search (both providers, deduplicated)
 - Mock search for testing
+
+Deep search can fetch full page content from search results.
+For JavaScript-heavy sites (Geni, FamilySearch, etc.), ScrapingBee
+can be used as a fallback for rendering.
 
 Configure via environment variables:
 - SERPAPI_KEY: SerpAPI key (for Google search results)
 - BRAVE_API_KEY: Brave Search API key
+- SCRAPINGBEE_API_KEY: ScrapingBee key (optional, for JS-heavy sites)
 """
 
 import os
@@ -443,6 +449,102 @@ def get_available_providers() -> list[str]:
     return available
 
 
+# Domains known to require JavaScript rendering for content
+JS_HEAVY_DOMAINS = [
+    'geni.com',
+    'familysearch.org',
+    'ancestry.com',
+    'ancestry.co.uk',
+    'myheritage.com',
+    'findagrave.com',
+    'billiongraves.com',
+    'wikitree.com',
+]
+
+
+def fetch_url_with_js(url: str, timeout: int = 30, max_chars: int = 15000) -> Optional[str]:
+    """
+    Fetch URL content using ScrapingBee for JavaScript rendering.
+
+    ScrapingBee handles JavaScript-heavy sites that block normal fetching.
+    Requires SCRAPINGBEE_API_KEY environment variable.
+
+    Args:
+        url: The URL to fetch
+        timeout: Request timeout in seconds
+        max_chars: Maximum characters to return
+
+    Returns:
+        Extracted text content or None if failed/no API key
+    """
+    import re
+    from html.parser import HTMLParser
+
+    api_key = os.environ.get("SCRAPINGBEE_API_KEY")
+    if not api_key:
+        return None
+
+    class TextExtractor(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.text_parts = []
+            self.skip_tags = {'script', 'style', 'nav', 'header', 'footer', 'aside'}
+            self.current_skip = 0
+
+        def handle_starttag(self, tag, attrs):
+            if tag in self.skip_tags:
+                self.current_skip += 1
+
+        def handle_endtag(self, tag):
+            if tag in self.skip_tags and self.current_skip > 0:
+                self.current_skip -= 1
+
+        def handle_data(self, data):
+            if self.current_skip == 0:
+                text = data.strip()
+                if text:
+                    self.text_parts.append(text)
+
+    try:
+        # ScrapingBee API endpoint
+        params = {
+            'api_key': api_key,
+            'url': url,
+            'render_js': 'true',
+            'premium_proxy': 'false',  # Keep costs low
+            'block_ads': 'true',
+            'block_resources': 'false',  # Need resources for JS rendering
+        }
+
+        api_url = f"https://app.scrapingbee.com/api/v1?{urlencode(params)}"
+
+        req = Request(api_url, headers={
+            "Accept": "text/html,application/xhtml+xml,*/*"
+        })
+
+        with urlopen(req, timeout=timeout) as response:
+            html = response.read().decode('utf-8', errors='ignore')
+
+        # Extract text from HTML
+        extractor = TextExtractor()
+        extractor.feed(html)
+        text = ' '.join(extractor.text_parts)
+
+        # Clean up whitespace
+        text = re.sub(r'\s+', ' ', text)
+
+        return text[:max_chars] if text else None
+
+    except Exception:
+        return None
+
+
+def is_js_heavy_domain(url: str) -> bool:
+    """Check if URL is from a known JavaScript-heavy domain."""
+    url_lower = url.lower()
+    return any(domain in url_lower for domain in JS_HEAVY_DOMAINS)
+
+
 def fetch_url_content(url: str, timeout: int = 15, max_chars: int = 15000) -> Optional[str]:
     """
     Fetch and extract text content from a URL.
@@ -509,22 +611,27 @@ def fetch_url_content(url: str, timeout: int = 15, max_chars: int = 15000) -> Op
 
 def create_deep_search(search_fn: Callable[[str], str],
                        fetch_top_n: int = 5,
-                       max_content_per_url: int = 10000) -> Callable[[str], str]:
+                       max_content_per_url: int = 10000,
+                       use_js_fallback: bool = True) -> Callable[[str], str]:
     """
     Create a deep search function that fetches full page content.
 
     Gets search results, then fetches full content from URLs until we have
-    fetch_top_n successful pages (not just attempts).
+    fetch_top_n successful pages (not just attempts). Uses ScrapingBee as
+    fallback for JavaScript-heavy sites if SCRAPINGBEE_API_KEY is set.
 
     Args:
         search_fn: Base search function (SerpAPI or Brave)
         fetch_top_n: Target number of successful page fetches (guarantees this many if possible)
         max_content_per_url: Max chars to extract per URL
+        use_js_fallback: Whether to use ScrapingBee for JS-heavy sites (default True)
 
     Returns:
         Function that returns search snippets + full page content
     """
     import re
+
+    has_scrapingbee = bool(os.environ.get("SCRAPINGBEE_API_KEY"))
 
     def deep_search(query: str) -> str:
         # Get initial search results
@@ -542,12 +649,24 @@ def create_deep_search(search_fn: Callable[[str], str],
         # Fetch content until we have fetch_top_n successes (or exhaust URLs)
         full_content = []
         failed_urls = []
+        js_rendered_urls = []  # Track URLs that needed JS rendering
 
         for url in good_urls:
             if len(full_content) >= fetch_top_n:
                 break  # We have enough
 
+            content = None
+
+            # Try normal fetch first
             content = fetch_url_content(url, max_chars=max_content_per_url)
+
+            # If failed and it's a JS-heavy domain, try ScrapingBee
+            if (not content or len(content) <= 200) and use_js_fallback and has_scrapingbee:
+                if is_js_heavy_domain(url):
+                    content = fetch_url_with_js(url, max_chars=max_content_per_url)
+                    if content and len(content) > 200:
+                        js_rendered_urls.append(url)
+
             if content and len(content) > 200:  # Only include substantial content
                 full_content.append(f"\n== Full Content from {url} ==\n{content}\n")
             else:
@@ -556,9 +675,21 @@ def create_deep_search(search_fn: Callable[[str], str],
         # Combine search results with full content
         if full_content:
             result = search_results + "\n\n== DETAILED PAGE CONTENT ==\n" + "\n".join(full_content)
-            # Note which URLs couldn't be fetched (these are often the best sources)
+
+            # Note stats
+            notes = []
+            if js_rendered_urls:
+                notes.append(f"{len(js_rendered_urls)} pages fetched via JS rendering")
             if failed_urls:
-                result += f"\n\n[Note: {len(failed_urls)} URLs could not be fetched (JavaScript required): {', '.join(failed_urls[:3])}...]"
+                notes.append(f"{len(failed_urls)} URLs could not be fetched")
+                if not has_scrapingbee:
+                    # Identify which failed URLs could benefit from JS rendering
+                    js_blocked = [u for u in failed_urls if is_js_heavy_domain(u)]
+                    if js_blocked:
+                        notes.append(f"({len(js_blocked)} need JavaScript: {', '.join(js_blocked[:2])}...)")
+            if notes:
+                result += f"\n\n[Note: {'; '.join(notes)}]"
+
             return result
 
         return search_results

@@ -26,8 +26,11 @@ from .search import (
     create_brave_search,
     create_auto_search,
     create_combined_search,
+    create_deep_search,
     create_mock_search,
     get_available_providers,
+    fetch_url_with_js,
+    is_js_heavy_domain,
     SearchError
 )
 from .main import WhereTheyWalked, create_app, get_api_status
@@ -56,8 +59,11 @@ __all__ = [
     "create_brave_search",
     "create_auto_search",
     "create_combined_search",
+    "create_deep_search",
     "create_mock_search",
     "get_available_providers",
+    "fetch_url_with_js",
+    "is_js_heavy_domain",
     "SearchError",
     # Other utilities
     "create_nominatim_geocoder",
