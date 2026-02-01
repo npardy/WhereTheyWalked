@@ -89,10 +89,10 @@ def run_test(gedcom_path: str, num_ancestors: int = 5, use_mock: bool = False):
     researchable = app.get_researchable()
     print(f"Researchable individuals: {len(researchable)}")
 
-    # Pick older ancestors with dates - more likely to be documented
+    # Pick ancestors from 1700-1850 - old enough to be documented, recent enough for web presence
     sample_with_dates = [
         ind for ind in researchable
-        if ind.get('birth_year') and ind['birth_year'] < 1850
+        if ind.get('birth_year') and 1700 < ind['birth_year'] < 1850
     ]
 
     if sample_with_dates:

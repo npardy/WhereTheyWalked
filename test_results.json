@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-01T00:45:00.481629",
+  "generated_at": "2026-02-01T00:54:45.999725",
   "version": "0.1.0",
   "stats": {
     "ancestors": {
@@ -15,14 +15,15 @@
       "military_service": 0
     },
     "locations": {
-      "total_locations": 1,
+      "total_locations": 5,
       "by_type": {
-        "residence": 1
+        "residence": 3,
+        "other": 2
       },
       "by_status": {
-        "unknown": 1
+        "unknown": 5
       },
-      "with_coordinates": 1,
+      "with_coordinates": 5,
       "needs_verification": 0,
       "shared_locations": 1
     },
@@ -32,27 +33,29 @@
   },
   "ancestors": [
     {
-      "individual_id": "@I152210140217@",
-      "full_name": "Hans Maybach",
-      "birth_year": 1414,
-      "death_year": 1461,
-      "birth_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
-      "death_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
+      "individual_id": "@I152093939132@",
+      "full_name": "William 'Red Stocking' Nickerson (DNA)",
+      "birth_year": 1701,
+      "death_year": 1763,
+      "birth_place": "Chatham, Barnstable, MA",
+      "death_place": "Chatham, Barnstable, Massachusetts, USA",
       "birth_year_discovered": null,
       "death_year_discovered": null,
       "birth_place_discovered": null,
       "death_place_discovered": null,
       "discovered_from": null,
-      "search_query": "\"Hans Maybach\" 1414 1461 Hall Baden-W\u00fcrttemberg",
-      "biography": null,
-      "biography_short": null,
+      "search_query": "\"William 'Red Stocking' Nickerson (DNA)\" 1701 1763 Chatham Barnstable",
+      "biography": "No additional information was discovered in the search results about William 'Red Stocking' Nickerson beyond the basic original data. More research would be needed to verify details about his life.",
+      "biography_short": "William 'Red Stocking' Nickerson was an early Massachusetts colonist from Barnstable County in the 18th century.",
       "notable": false,
       "notable_reason": null,
       "confidence": "low",
       "locations": [],
       "historic_events": [],
       "occupation": null,
-      "migration_path": [],
+      "migration_path": [
+        "Chatham, Barnstable, MA"
+      ],
       "has_museum": false,
       "has_cemetery": false,
       "has_historic_site": false,
@@ -64,27 +67,29 @@
       "source_urls": []
     },
     {
-      "individual_id": "@I152210140192@",
-      "full_name": "Seitz Maybach",
-      "birth_year": 1430,
-      "death_year": 1507,
-      "birth_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
-      "death_place": "Hall, Schw\u00e4bisch Hall, Baden-W\u00fcrttemberg, Deutschland",
+      "individual_id": "@I152550288602@",
+      "full_name": "Sarah Lydia Covell",
+      "birth_year": 1701,
+      "death_year": 1790,
+      "birth_place": "Chatham, Barnstable, Massachusetts, United States",
+      "death_place": "Chatham, Barnstable, Massachusetts, United States",
       "birth_year_discovered": null,
       "death_year_discovered": null,
       "birth_place_discovered": null,
       "death_place_discovered": null,
       "discovered_from": null,
-      "search_query": "\"Seitz Maybach\" 1430 1507 Hall Baden-W\u00fcrttemberg",
-      "biography": null,
-      "biography_short": null,
+      "search_query": "\"Sarah Lydia Covell\" 1701 1790 Chatham Massachusetts",
+      "biography": "No additional information was found about Sarah Lydia Covell beyond the original record showing she was born and died in Chatham, Massachusetts in the 18th century.",
+      "biography_short": "Sarah Lydia Covell was an 18th-century resident of Chatham, Massachusetts who lived a full life spanning most of the 1700s.",
       "notable": false,
       "notable_reason": null,
       "confidence": "low",
       "locations": [],
       "historic_events": [],
       "occupation": null,
-      "migration_path": [],
+      "migration_path": [
+        "Chatham, Massachusetts"
+      ],
       "has_museum": false,
       "has_cemetery": false,
       "has_historic_site": false,
@@ -96,27 +101,38 @@
       "source_urls": []
     },
     {
-      "individual_id": "@I152210139260@",
-      "full_name": "Margaret Plattner",
-      "birth_year": 1450,
-      "death_year": 1537,
-      "birth_place": null,
-      "death_place": null,
+      "individual_id": "@I152579695891@",
+      "full_name": "Hannah Cromwell",
+      "birth_year": 1701,
+      "death_year": 1750,
+      "birth_place": "Westchester, Bronx, New York City, New York, USA",
+      "death_place": "White Plains, Westchester County, New York, United States of America",
       "birth_year_discovered": null,
       "death_year_discovered": null,
       "birth_place_discovered": null,
       "death_place_discovered": null,
       "discovered_from": null,
-      "search_query": "\"Margaret Plattner\" 1450 1537",
-      "biography": null,
-      "biography_short": null,
+      "search_query": "\"Hannah Cromwell\" 1701 1750 Westchester New York",
+      "biography": "Hannah Cromwell Underhill was a woman who lived in Westchester, New York during the early 18th century. She was married to Caleb Horton and was a daughter of Abraham Underhill. Limited information is available about her specific life details or activities.",
+      "biography_short": "Hannah Cromwell was an early 18th-century resident of Westchester, New York, who was married to Caleb Horton and part of the Underhill family.",
       "notable": false,
       "notable_reason": null,
       "confidence": "low",
-      "locations": [],
+      "locations": [
+        {
+          "name": "White Plains, Westchester County",
+          "type": "residence",
+          "address": null,
+          "coordinates": null,
+          "description": "Place of death"
+        }
+      ],
       "historic_events": [],
       "occupation": null,
-      "migration_path": [],
+      "migration_path": [
+        "Westchester, New York",
+        "White Plains, New York"
+      ],
       "has_museum": false,
       "has_cemetery": false,
       "has_historic_site": false,
@@ -125,19 +141,23 @@
       "needs_confirmation": false,
       "confirmation_reason": null,
       "timeline_validation": null,
-      "source_urls": []
+      "source_urls": [
+        "https://www.genealogieonline.nl/en/van-laarhoven-family-tree/I22899.php",
+        "https://www.myheritage.com/names/william_cromwell",
+        "https://www.findagrave.com/memorial/141819913/hannah-underhill"
+      ]
     }
   ],
   "locations": {
     "locations": {
-      "27e6df78f94b": {
-        "id": "27e6df78f94b",
-        "name": "Hall",
+      "95c63190bf54": {
+        "id": "95c63190bf54",
+        "name": "Chatham",
         "type": "residence",
-        "original_name": "Hall",
-        "original_city": "Schw\u00e4bisch Hall",
-        "original_region": "Baden-W\u00fcrttemberg",
-        "original_country": "Deutschland",
+        "original_name": "Chatham",
+        "original_city": "Chatham",
+        "original_region": "Barnstable",
+        "original_country": "MA",
         "status": "unknown",
         "status_details": null,
         "moved_to": null,
@@ -146,8 +166,8 @@
         "current_name": null,
         "current_address": null,
         "coordinates": [
-          49.1182957,
-          9.7836967
+          41.6812229,
+          -69.991127
         ],
         "is_visitable": true,
         "visit_notes": null,
@@ -158,32 +178,181 @@
         "related_sites": [],
         "ancestor_connections": [
           {
-            "person_id": "@I152210140217@",
-            "person_name": "Hans Maybach",
+            "person_id": "@I152093939132@",
+            "person_name": "William 'Red Stocking' Nickerson (DNA)",
             "relationship": "born_at",
-            "year": 1414,
+            "year": 1701,
             "event_description": "Born here"
-          },
+          }
+        ],
+        "source_urls": [],
+        "confidence": "low",
+        "needs_verification": false
+      },
+      "1ba823146eda": {
+        "id": "1ba823146eda",
+        "name": "Chatham",
+        "type": "other",
+        "original_name": "Chatham",
+        "original_city": "Barnstable",
+        "original_region": "Massachusetts",
+        "original_country": "USA",
+        "status": "unknown",
+        "status_details": null,
+        "moved_to": null,
+        "relocation_chain": [],
+        "final_destination": null,
+        "current_name": null,
+        "current_address": null,
+        "coordinates": [
+          41.6822748,
+          -69.9595161
+        ],
+        "is_visitable": true,
+        "visit_notes": null,
+        "visitor_tips": null,
+        "history": null,
+        "historic_events": [],
+        "notable_connections": [],
+        "related_sites": [],
+        "ancestor_connections": [
           {
-            "person_id": "@I152210140217@",
-            "person_name": "Hans Maybach",
+            "person_id": "@I152093939132@",
+            "person_name": "William 'Red Stocking' Nickerson (DNA)",
             "relationship": "died_at",
-            "year": 1461,
+            "year": 1763,
             "event_description": "Died here"
           },
           {
-            "person_id": "@I152210140192@",
-            "person_name": "Seitz Maybach",
+            "person_id": "@I152550288602@",
+            "person_name": "Sarah Lydia Covell",
             "relationship": "born_at",
-            "year": 1430,
+            "year": 1701,
             "event_description": "Born here"
           },
           {
-            "person_id": "@I152210140192@",
-            "person_name": "Seitz Maybach",
+            "person_id": "@I152550288602@",
+            "person_name": "Sarah Lydia Covell",
             "relationship": "died_at",
-            "year": 1507,
+            "year": 1790,
             "event_description": "Died here"
+          }
+        ],
+        "source_urls": [],
+        "confidence": "low",
+        "needs_verification": false
+      },
+      "94f4448edf6f": {
+        "id": "94f4448edf6f",
+        "name": "Westchester",
+        "type": "residence",
+        "original_name": "Westchester",
+        "original_city": "Bronx",
+        "original_region": "New York",
+        "original_country": "USA",
+        "status": "unknown",
+        "status_details": null,
+        "moved_to": null,
+        "relocation_chain": [],
+        "final_destination": null,
+        "current_name": null,
+        "current_address": null,
+        "coordinates": [
+          40.8244731,
+          -73.8932392
+        ],
+        "is_visitable": true,
+        "visit_notes": null,
+        "visitor_tips": null,
+        "history": null,
+        "historic_events": [],
+        "notable_connections": [],
+        "related_sites": [],
+        "ancestor_connections": [
+          {
+            "person_id": "@I152579695891@",
+            "person_name": "Hannah Cromwell",
+            "relationship": "born_at",
+            "year": 1701,
+            "event_description": "Born here"
+          }
+        ],
+        "source_urls": [],
+        "confidence": "low",
+        "needs_verification": false
+      },
+      "9be1f6115779": {
+        "id": "9be1f6115779",
+        "name": "White Plains",
+        "type": "other",
+        "original_name": "White Plains",
+        "original_city": "Westchester County",
+        "original_region": "New York",
+        "original_country": "United States of America",
+        "status": "unknown",
+        "status_details": null,
+        "moved_to": null,
+        "relocation_chain": [],
+        "final_destination": null,
+        "current_name": null,
+        "current_address": null,
+        "coordinates": [
+          41.0339862,
+          -73.7629097
+        ],
+        "is_visitable": true,
+        "visit_notes": null,
+        "visitor_tips": null,
+        "history": null,
+        "historic_events": [],
+        "notable_connections": [],
+        "related_sites": [],
+        "ancestor_connections": [
+          {
+            "person_id": "@I152579695891@",
+            "person_name": "Hannah Cromwell",
+            "relationship": "died_at",
+            "year": 1750,
+            "event_description": "Died here"
+          }
+        ],
+        "source_urls": [],
+        "confidence": "low",
+        "needs_verification": false
+      },
+      "50d2e75eb3d4": {
+        "id": "50d2e75eb3d4",
+        "name": "White Plains, Westchester County",
+        "type": "residence",
+        "original_name": "White Plains, Westchester County",
+        "original_city": "",
+        "original_region": "",
+        "original_country": "",
+        "status": "unknown",
+        "status_details": null,
+        "moved_to": null,
+        "relocation_chain": [],
+        "final_destination": null,
+        "current_name": null,
+        "current_address": null,
+        "coordinates": [
+          41.0339862,
+          -73.7629097
+        ],
+        "is_visitable": true,
+        "visit_notes": null,
+        "visitor_tips": null,
+        "history": null,
+        "historic_events": [],
+        "notable_connections": [],
+        "related_sites": [],
+        "ancestor_connections": [
+          {
+            "person_id": "@I152579695891@",
+            "person_name": "Hannah Cromwell",
+            "relationship": "event_at",
+            "year": null,
+            "event_description": "Place of death"
           }
         ],
         "source_urls": [],
@@ -192,14 +361,15 @@
       }
     },
     "stats": {
-      "total_locations": 1,
+      "total_locations": 5,
       "by_type": {
-        "residence": 1
+        "residence": 3,
+        "other": 2
       },
       "by_status": {
-        "unknown": 1
+        "unknown": 5
       },
-      "with_coordinates": 1,
+      "with_coordinates": 5,
       "needs_verification": 0,
       "shared_locations": 1
     }
@@ -208,13 +378,13 @@
   "notable": [],
   "shared_locations": [
     {
-      "id": "27e6df78f94b",
-      "name": "Hall",
-      "type": "residence",
-      "original_name": "Hall",
-      "original_city": "Schw\u00e4bisch Hall",
-      "original_region": "Baden-W\u00fcrttemberg",
-      "original_country": "Deutschland",
+      "id": "1ba823146eda",
+      "name": "Chatham",
+      "type": "other",
+      "original_name": "Chatham",
+      "original_city": "Barnstable",
+      "original_region": "Massachusetts",
+      "original_country": "USA",
       "status": "unknown",
       "status_details": null,
       "moved_to": null,
@@ -223,8 +393,8 @@
       "current_name": null,
       "current_address": null,
       "coordinates": [
-        49.1182957,
-        9.7836967
+        41.6822748,
+        -69.9595161
       ],
       "is_visitable": true,
       "visit_notes": null,
@@ -235,31 +405,24 @@
       "related_sites": [],
       "ancestor_connections": [
         {
-          "person_id": "@I152210140217@",
-          "person_name": "Hans Maybach",
-          "relationship": "born_at",
-          "year": 1414,
-          "event_description": "Born here"
-        },
-        {
-          "person_id": "@I152210140217@",
-          "person_name": "Hans Maybach",
+          "person_id": "@I152093939132@",
+          "person_name": "William 'Red Stocking' Nickerson (DNA)",
           "relationship": "died_at",
-          "year": 1461,
+          "year": 1763,
           "event_description": "Died here"
         },
         {
-          "person_id": "@I152210140192@",
-          "person_name": "Seitz Maybach",
+          "person_id": "@I152550288602@",
+          "person_name": "Sarah Lydia Covell",
           "relationship": "born_at",
-          "year": 1430,
+          "year": 1701,
           "event_description": "Born here"
         },
         {
-          "person_id": "@I152210140192@",
-          "person_name": "Seitz Maybach",
+          "person_id": "@I152550288602@",
+          "person_name": "Sarah Lydia Covell",
           "relationship": "died_at",
-          "year": 1507,
+          "year": 1790,
           "event_description": "Died here"
         }
       ],
