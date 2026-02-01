@@ -77,6 +77,9 @@ class Location:
     importance: str = "low"  # high, medium, low - AI determines significance
     should_enrich: bool = False  # AI determines if worth deeper research
     year: Optional[int] = None  # Year associated with this location
+
+    # Time period context for chain-following (propagated from parent location)
+    relevant_time_period: Optional[tuple] = None  # (min_year, max_year) for filtering related sites
     
     # Chain tracking (for moved locations)
     relocation_chain: list = field(default_factory=list)  # [{name, year, reason}, ...]
@@ -112,7 +115,8 @@ class Location:
             "needs_verification": self.needs_verification,
             "importance": self.importance,
             "should_enrich": self.should_enrich,
-            "year": self.year
+            "year": self.year,
+            "relevant_time_period": list(self.relevant_time_period) if self.relevant_time_period else None
         }
     
     def add_connection(self, person_id: str, person_name: str, relationship: str,
@@ -420,6 +424,12 @@ class LocationProcessor:
             return
         _visited.add(location.id)
 
+        # Compute time period from ancestor connections (for filtering related sites)
+        if location.ancestor_connections and not location.relevant_time_period:
+            years = [c.year for c in location.ancestor_connections if c.year]
+            if years:
+                location.relevant_time_period = (min(years) - 20, max(years) + 30)
+
         # Prevent infinite loops
         if _depth >= _max_depth:
             if verbose:
@@ -484,7 +494,7 @@ class LocationProcessor:
                 # Create a temporary location to search the destination
                 dest_location = Location(
                     id=self._generate_location_id(
-                        moved_to_name, 
+                        moved_to_name,
                         moved_info.get("city", location.original_city),
                         moved_info.get("region", location.original_region)
                     ),
@@ -493,7 +503,9 @@ class LocationProcessor:
                     original_name=moved_to_name,
                     original_city=moved_info.get("city") or location.original_city,
                     original_region=moved_info.get("region") or location.original_region,
-                    original_country=location.original_country
+                    original_country=location.original_country,
+                    # Propagate time period for filtering
+                    relevant_time_period=location.relevant_time_period
                 )
                 
                 # Recursively enrich the destination
@@ -551,15 +563,30 @@ class LocationProcessor:
             'historic home', 'burial site', 'meeting house', 'headquarters'
         ]
 
+        # Determine the relevant time period from ancestor connections
+        ancestor_years = [c.year for c in location.ancestor_connections if c.year]
+        max_ancestor_year = max(ancestor_years) + 30 if ancestor_years else None
+
         for site_info in location.related_sites:
             if not isinstance(site_info, dict):
                 continue
 
             site_name = site_info.get('name', '').strip()
             relationship = site_info.get('relationship', '').lower()
+            year_built = site_info.get('year_built')
 
             if not site_name:
                 continue
+
+            # Time-period filter: skip sites built after ancestor's time
+            # Exception: museums/memorials about the era are allowed
+            if year_built and max_ancestor_year and year_built > max_ancestor_year:
+                is_about_era = any(term in relationship.lower() for term in
+                    ['museum about', 'memorial to', 'dedicated to', 'commemorat', 'preserv'])
+                if not is_about_era:
+                    if verbose:
+                        print(f"  → Skipping {site_name} (built {year_built}, after ancestor era)")
+                    continue
 
             # Check if this is a significant relationship worth following
             is_significant = any(sig in relationship for sig in significant_relationships)
@@ -604,7 +631,9 @@ class LocationProcessor:
                 original_name=site_name,
                 original_city=location.original_city,
                 original_region=location.original_region,
-                original_country=location.original_country
+                original_country=location.original_country,
+                # Propagate time period from parent for filtering
+                relevant_time_period=location.relevant_time_period
             )
 
             # Add cross-reference back to original location
@@ -628,6 +657,43 @@ class LocationProcessor:
 
     def _synthesize_location(self, location: Location, search_results: str) -> dict:
         """Synthesize location data from search results."""
+        # Build ancestor context for time-period filtering
+        ancestor_context = ""
+        if location.ancestor_connections:
+            years = [c.year for c in location.ancestor_connections if c.year]
+            names = [c.person_name for c in location.ancestor_connections]
+            if years:
+                min_year = min(years) - 20  # Allow some buffer for parents/childhood
+                max_year = max(years) + 20  # Allow buffer for later life events
+                ancestor_context = f"""
+ANCESTOR CONTEXT:
+Connected ancestors: {', '.join(names[:3])}
+Relevant time period: approximately {min_year}-{max_year}
+Only include related sites that existed during or are specifically about this era.
+Modern attractions (built after {max_year}) should NOT be included unless they are:
+- Museums/memorials specifically about ancestors or their era
+- Sites that contain relocated historical materials from the relevant period
+"""
+            else:
+                ancestor_context = f"""
+ANCESTOR CONTEXT:
+Connected ancestors: {', '.join(names[:3])}
+Relevant time period: historical/genealogical research context
+Prefer historically significant sites over modern tourist attractions.
+"""
+        elif location.relevant_time_period:
+            # Chain-followed location - use propagated time period
+            min_year, max_year = location.relevant_time_period
+            ancestor_context = f"""
+ANCESTOR CONTEXT:
+This location was discovered while researching a family member.
+Relevant time period: approximately {min_year}-{max_year}
+Only include related sites that existed during or are specifically about this era.
+Modern attractions (built after {max_year}) should NOT be included unless they are:
+- Museums/memorials specifically about ancestors or their era
+- Sites that contain relocated historical materials from the relevant period
+"""
+
         prompt = f"""Analyze these search results about a historic location and extract ALL contextually relevant information.
 
 LOCATION:
@@ -636,6 +702,7 @@ Type: {location.type}
 City: {location.original_city}
 Region: {location.original_region}
 Country: {location.original_country}
+{ancestor_context}
 
 SEARCH RESULTS:
 {search_results[:6000]}
@@ -674,6 +741,7 @@ Based on ONLY the search results above, provide a JSON response:
         {{
             "name": "Name of related site",
             "relationship": "How it connects (e.g. 'original location', 'sister church', 'founder also built')",
+            "year_built": year the site was built/founded or null,
             "note": "Why a visitor might care"
         }}
     ],
@@ -695,7 +763,12 @@ IMPORTANT GUIDELINES:
 
 2. For "notable_connections": Include ANY compelling facts that make this location more interesting to visit. Famous people connected to it, historical events, architectural features, etc.
 
-3. For "related_sites": Include sites that are meaningfully connected - not just geographically nearby, but historically or thematically linked. A visitor researching their ancestor here might also want to visit these.
+3. For "related_sites": CRITICAL - Only include sites that are HISTORICALLY relevant to the ancestor's time period:
+   - Sites that existed during the ancestor's lifetime
+   - Museums/memorials specifically about the ancestor's era
+   - Sites containing relocated historical materials from that period
+   - Do NOT include modern attractions that just happen to be nearby (e.g., a railroad museum built in 1887 is NOT relevant to a 1763 burial site)
+   - Include year_built if known to help filter
 
 4. For "history": Focus on what makes this place significant. Don't just say "it's a cemetery" - say what kind, when founded, notable features.
 
