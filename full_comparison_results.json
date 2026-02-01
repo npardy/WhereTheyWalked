@@ -1,0 +1,233 @@
+{
+  "search_results": {
+    "ancestor": {
+      "serp_len": 3792,
+      "brave_len": 4447
+    },
+    "cemetery": {
+      "serp_len": 3727,
+      "brave_len": 1532
+    },
+    "church": {
+      "serp_len": 3529,
+      "brave_len": 3168
+    },
+    "event": {
+      "serp_len": 3967,
+      "brave_len": 4476
+    }
+  },
+  "serp_synthesis": {
+    "individual_id": "test_001",
+    "full_name": "William Nickerson",
+    "birth_year": 1604,
+    "death_year": 1689,
+    "birth_place": "Norwich, England",
+    "death_place": "Chatham, Massachusetts",
+    "birth_year_discovered": 1604,
+    "death_year_discovered": 1689,
+    "birth_place_discovered": "Norwich, Norfolk, England, UK",
+    "death_place_discovered": "Chatham, Massachusetts, USA",
+    "discovered_from": "nickersonassoc.com",
+    "search_query": "\"William Nickerson\" Chatham Massachusetts 1600s founder genealogy",
+    "biography": "William Nickerson was an English settler who became the founder of Chatham, Massachusetts in the mid-17th century. Originally a weaver by trade from Norwich, England, he immigrated to the American colonies in 1637 with his wife Anne Busby and four children, initially settling in Salem before moving to Cape Cod. Nickerson was a pioneering land surveyor who made significant early land purchases from the local Native American Monomoyick tribe, specifically from Sachem Mattaquason, which enabled the establishment of the settlement that would become Chatham. He is considered a key early colonial settler who took substantial personal and economic risks in establishing a new community in the Massachusetts Bay Colony.",
+    "biography_short": "William Nickerson was an English immigrant who founded Chatham, Massachusetts, purchasing land from Native Americans and establishing one of the early European settlements on Cape Cod.",
+    "notable": true,
+    "notable_reason": "Founder of Chatham, early Cape Cod settler who negotiated land purchases with Native Americans",
+    "confidence": "high",
+    "locations": [
+      {
+        "name": "Nickerson Family Association House Museum",
+        "normalized_place": "Chatham, Massachusetts, USA",
+        "type": "museum",
+        "year": 1827,
+        "importance": "high",
+        "should_enrich": true
+      }
+    ],
+    "historic_events": [
+      {
+        "name": "English Colonial Expansion",
+        "year": 1637,
+        "event_type": "migration",
+        "description": "English settlers expanding into North American territories",
+        "ancestor_role": "Settler and land purchaser",
+        "connection_type": "participant"
+      }
+    ],
+    "occupation": [
+      "weaver",
+      "land surveyor"
+    ],
+    "migration_path": [
+      {
+        "place": "Norwich, Norfolk, England, UK",
+        "year_arrived": 1604,
+        "location_type": "origin"
+      },
+      {
+        "place": "Salem, Massachusetts, USA",
+        "year_arrived": 1637,
+        "location_type": "immigration_port"
+      },
+      {
+        "place": "Chatham, Massachusetts, USA",
+        "year_arrived": 1656,
+        "reason": "Land purchase and settlement founding",
+        "location_type": "settlement"
+      }
+    ],
+    "notable_relatives": [
+      {
+        "name": "Anne Busby",
+        "relationship": "spouse",
+        "why_notable": "Wife who accompanied William Nickerson to the American colonies"
+      },
+      {
+        "name": "William Nickerson III",
+        "relationship": "son",
+        "why_notable": "Continued family legacy in Massachusetts"
+      }
+    ],
+    "has_museum": true,
+    "has_cemetery": false,
+    "has_historic_site": false,
+    "mayflower_connection": false,
+    "military_service": false,
+    "needs_confirmation": false,
+    "confirmation_reason": null,
+    "timeline_validation": null,
+    "source_urls": [
+      "https://libcat.familysearch.org/Record/597525?searchId=45524259&recordIndex=5&page=1",
+      "https://www.werelate.org/wiki/Person:William_Nickerson_(2",
+      "https://nickersonassoc.com/about/nickerson-history/",
+      "https://www.facebook.com/groups/mainegenealogicalsociety/posts/10169295753670492/",
+      "https://www.geni.com/people/William-Nickerson-of-Chatham/6000000003490631675",
+      "http://massandmoregenealogy.blogspot.com/2011/09/william-nickerson-and-anne-busby-of.html",
+      "https://www.coastalneighborhoods.com/blog/the-venerable-nickerson-family-of-chatham/",
+      "https://www.geni.com/people/William-Nickerson-III/6000000003490621778",
+      "https://nickersonassoc.com/2017/01/24/william-nickerson-the-settler-was-a-risk-taker/",
+      "https://www.wikitree.com/wiki/Nickerson-418"
+    ]
+  },
+  "brave_synthesis": {
+    "individual_id": "test_001",
+    "full_name": "William Nickerson",
+    "birth_year": 1604,
+    "death_year": 1689,
+    "birth_place": "Norwich, England",
+    "death_place": "Chatham, Massachusetts",
+    "birth_year_discovered": 1604,
+    "death_year_discovered": 1689,
+    "birth_place_discovered": "Norwich, England, UK",
+    "death_place_discovered": "Chatham, Massachusetts, USA",
+    "discovered_from": "Multiple genealogical sources",
+    "search_query": "\"William Nickerson\" Chatham Massachusetts 1600s founder genealogy",
+    "biography": "William Nickerson was an English settler who became the founder of Chatham, Massachusetts, arriving in Salem in 1637 aboard the ship John and Dorothy with his wife Anne Busby and four children. He was instrumental in establishing the settlement of Monomoit (later Chatham), purchasing land directly from the local Native American Sagamore Mattaquason. Nickerson successfully transitioned from England to the Massachusetts Bay Colony, establishing his family and helping to develop the Cape Cod region during the early colonial period.",
+    "biography_short": "William Nickerson was a pivotal early English settler who founded Chatham, Massachusetts, purchasing land from Native Americans and establishing a significant family lineage in the region.",
+    "notable": true,
+    "notable_reason": "Founder of Chatham, Massachusetts; early colonial settler who purchased land directly from Native American leadership",
+    "confidence": "high",
+    "locations": [
+      {
+        "name": "Nickerson Cemetery",
+        "normalized_place": "Chatham, Massachusetts, USA",
+        "type": "cemetery",
+        "importance": "high",
+        "should_enrich": true
+      },
+      {
+        "name": "Monomoit (original settlement)",
+        "normalized_place": "Chatham, Massachusetts, USA",
+        "type": "settlement",
+        "importance": "high",
+        "should_enrich": true
+      }
+    ],
+    "historic_events": [
+      {
+        "name": "Colonial Massachusetts Settlement",
+        "year": 1637,
+        "event_type": "migration",
+        "description": "Early English settlement of Massachusetts Bay Colony",
+        "ancestor_role": "Settler",
+        "connection_type": "participant"
+      }
+    ],
+    "occupation": "Colonial settler",
+    "migration_path": [
+      {
+        "place": "Norwich, England, UK",
+        "location_type": "origin"
+      },
+      {
+        "place": "Salem, Massachusetts, USA",
+        "year_arrived": 1637,
+        "location_type": "immigration_port"
+      },
+      {
+        "place": "Yarmouth, Massachusetts, USA",
+        "location_type": "residence"
+      },
+      {
+        "place": "Chatham, Massachusetts, USA",
+        "year_arrived": 1656,
+        "location_type": "final_settlement"
+      }
+    ],
+    "notable_relatives": [
+      {
+        "name": "Anne Busby",
+        "relationship": "spouse"
+      },
+      {
+        "name": "Nicholas Busby",
+        "relationship": "father-in-law"
+      },
+      {
+        "name": "Nicholas Nickerson",
+        "relationship": "son"
+      }
+    ],
+    "has_museum": false,
+    "has_cemetery": true,
+    "has_historic_site": true,
+    "mayflower_connection": false,
+    "military_service": false,
+    "needs_confirmation": false,
+    "confirmation_reason": null,
+    "timeline_validation": null,
+    "source_urls": [
+      "https://nickersonassoc.com/about/nickerson-history/",
+      "https://www.familysearch.org/service/records/storage/das-mem/patron/v2/TH-904-57790-578-86/dist.txt?ctx=ArtCtxPublic",
+      "https://www.geni.com/people/William-Nickerson-of-Chatham/6000000003490631675",
+      "http://massandmoregenealogy.blogspot.com/2011/09/william-nickerson-and-anne-busby-of.html",
+      "http://thepyeplate.blogspot.com/2014/02/william-nickerson-1604-1689-chatham.html",
+      "https://nickersonassoc.com/genealogy/nickerson-genealogy-project/",
+      "https://www.etourchatham.org/nickerson_genealogy.html",
+      "https://www.wikitree.com/wiki/Nickerson-126",
+      "https://www.historic-chatham.org/plaques300_11.html",
+      "https://archive.org/details/nickersonfamilydunse_0"
+    ]
+  },
+  "costs": {
+    "serp_ai": {
+      "model": "claude-3-5-haiku-latest",
+      "input_tokens": 2585,
+      "output_tokens": 817,
+      "total_tokens": 3402,
+      "input_cost": 0.0026,
+      "output_cost": 0.0041,
+      "total_cost": 0.0067
+    },
+    "brave_ai": {
+      "model": "claude-3-5-haiku-latest",
+      "input_tokens": 2752,
+      "output_tokens": 826,
+      "total_tokens": 3578,
+      "input_cost": 0.0028,
+      "output_cost": 0.0041,
+      "total_cost": 0.0069
+    }
+  }
+}
