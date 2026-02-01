@@ -82,8 +82,10 @@ class ResearchResult:
     has_museum: bool = False
     has_cemetery: bool = False
     has_historic_site: bool = False
-    mayflower_connection: bool = False
+    pioneer_settler: bool = False  # Mayflower, First Fleet, Voortrekkers, etc.
     military_service: bool = False
+    noble_or_royal: bool = False
+    immigrant_pioneer: bool = False
 
     # Validation
     needs_confirmation: bool = False
@@ -117,8 +119,10 @@ class ResearchResult:
             "has_museum": self.has_museum,
             "has_cemetery": self.has_cemetery,
             "has_historic_site": self.has_historic_site,
-            "mayflower_connection": self.mayflower_connection,
+            "pioneer_settler": self.pioneer_settler,
             "military_service": self.military_service,
+            "noble_or_royal": self.noble_or_royal,
+            "immigrant_pioneer": self.immigrant_pioneer,
             "needs_confirmation": self.needs_confirmation,
             "confirmation_reason": self.confirmation_reason,
             "timeline_validation": self.timeline_validation.to_dict() if self.timeline_validation else None,
@@ -431,7 +435,7 @@ CRITICAL INSTRUCTIONS:
     "biography": "200-400 word detailed biographical summary. Include ALL specific facts: roles, achievements, family connections, historical involvement. Be comprehensive.",
     "biography_short": "2-3 sentence summary highlighting their most significant contribution or connection.",
 
-    "notable": true/false (mark true if: connected to famous people, involved in historic events, mentioned in history books, has museum/memorial, signed historic documents, or played any role in American history),
+    "notable": true/false (mark true if: connected to famous people, involved in historic events, mentioned in history books, has museum/memorial, signed historic documents, or played any significant role in local/national/world history),
     "notable_reason": "Specific explanation: what they did, who they knew, why they matter",
 
     "confidence": "low/medium/high",
@@ -457,7 +461,7 @@ CRITICAL INSTRUCTIONS:
 
     "historic_events": [
         {{
-            "name": "Official name of event (e.g., 'Flushing Remonstrance', 'Salem Witch Trials')",
+            "name": "Official name of event (e.g., 'Salem Witch Trials', 'Irish Famine', 'Thirty Years War', 'French Revolution')",
             "year": start year,
             "end_year": end year if multi-year event,
             "date_range": "e.g., 1657" or "1692-1693",
@@ -483,23 +487,25 @@ CRITICAL INSTRUCTIONS:
     ],
 
     "contributions": [
-        "List of specific contributions to history (e.g., 'Advocated for religious freedom', 'Signed the Flushing Remonstrance')"
+        "List of specific contributions to history (e.g., 'Advocated for religious freedom', 'Served in local government', 'Founded a business/church/school')"
     ],
 
     "flags": {{
         "has_museum": true/false,
         "has_cemetery": true/false,
         "has_historic_site": true/false,
-        "mayflower_connection": true/false,
+        "pioneer_settler": true/false (early settler, colonist, or founding migration - e.g., Mayflower, First Fleet to Australia, Voortrekkers, etc.),
         "military_service": true/false,
         "signed_historic_document": true/false,
         "founded_settlement": true/false,
         "religious_leader": true/false,
-        "political_figure": true/false
+        "political_figure": true/false,
+        "noble_or_royal": true/false (any aristocratic, noble, or royal lineage),
+        "immigrant_pioneer": true/false (significant immigration story)
     }}
 }}
 
-IMPORTANT: Be thorough! If the results mention the First Amendment, religious freedom, witch trials, colonial governance, or any historical significance - extract it. Don't miss connections to famous events or people.
+IMPORTANT: Be thorough! Extract any historical significance - wars, migrations, religious persecution, revolutions, famines, colonial events, noble lineages, or connections to famous events or people. This works for ancestors from ANY country.
 
 Respond with ONLY valid JSON."""
 
@@ -561,8 +567,10 @@ Respond with ONLY valid JSON."""
         result.has_museum = flags.get("has_museum", False)
         result.has_cemetery = flags.get("has_cemetery", False)
         result.has_historic_site = flags.get("has_historic_site", False)
-        result.mayflower_connection = flags.get("mayflower_connection", False)
+        result.pioneer_settler = flags.get("pioneer_settler", False)
         result.military_service = flags.get("military_service", False)
+        result.noble_or_royal = flags.get("noble_or_royal", False)
+        result.immigrant_pioneer = flags.get("immigrant_pioneer", False)
 
         # Additional flags from enhanced extraction
         if flags.get("signed_historic_document") or flags.get("founded_settlement"):
@@ -776,7 +784,9 @@ def mock_synthesize(prompt: str) -> str:
             "has_museum": False,
             "has_cemetery": False,
             "has_historic_site": False,
-            "mayflower_connection": False,
-            "military_service": False
+            "pioneer_settler": False,
+            "military_service": False,
+            "noble_or_royal": False,
+            "immigrant_pioneer": False
         }
     })
