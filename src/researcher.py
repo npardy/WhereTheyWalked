@@ -75,13 +75,16 @@ class ResearchResult:
     occupation: Optional[str] = None
     migration_path: list[str] = field(default_factory=list)
     
+    # Notable family connections (e.g., stepfather = John Winthrop)
+    notable_relatives: list = field(default_factory=list)  # [{name, relationship, why_notable}]
+
     # Flags
     has_museum: bool = False
     has_cemetery: bool = False
     has_historic_site: bool = False
     mayflower_connection: bool = False
     military_service: bool = False
-    
+
     # Validation
     needs_confirmation: bool = False
     confirmation_reason: Optional[str] = None
@@ -110,6 +113,7 @@ class ResearchResult:
             "historic_events": self.historic_events,
             "occupation": self.occupation,
             "migration_path": self.migration_path,
+            "notable_relatives": self.notable_relatives,
             "has_museum": self.has_museum,
             "has_cemetery": self.has_cemetery,
             "has_historic_site": self.has_historic_site,
@@ -392,8 +396,9 @@ class AncestorResearcher:
     
     def _synthesize_research(self, result: ResearchResult) -> dict:
         """Use AI to synthesize search results into structured data."""
-        
-        prompt = f"""Analyze these search results about an ancestor and extract structured information.
+
+        prompt = f"""Analyze these search results about an ancestor and extract ALL available structured information.
+Be thorough - extract every mention of historic events, notable people, and significant facts.
 
 ANCESTOR:
 Name: {result.full_name}
@@ -401,56 +406,83 @@ Birth: {result.birth_year or 'Unknown'} in {result.birth_place or 'Unknown'}
 Death: {result.death_year or 'Unknown'} in {result.death_place or 'Unknown'}
 
 SEARCH RESULTS:
-{result.raw_search_results[:8000]}
+{result.raw_search_results[:20000]}
 
-Based on ONLY the search results above (do not make up information), provide a JSON response.
+Based on ONLY the search results above (do not make up information), provide a comprehensive JSON response.
 
-IMPORTANT: If the search results mention birth/death years for this person that are NOT in the original data above, extract them as "discovered" dates.
+CRITICAL INSTRUCTIONS:
+1. Extract ALL historic events mentioned, even indirectly (wars, trials, migrations, political movements)
+2. Extract ALL notable relatives or connections to famous people (parents, stepparents, spouses, in-laws)
+3. Look for contributions to history (religious freedom, founding documents, military service)
+4. Identify specific roles they played (signed documents, advocated for causes, testified at trials)
 
 {{
-    "birth_year_discovered": year or null (ONLY if found in search results and different from/missing in original),
-    "death_year_discovered": year or null (ONLY if found in search results and different from/missing in original),
-    "birth_place_discovered": "place" or null (ONLY if found and different from original),
-    "death_place_discovered": "place" or null (ONLY if found and different from original),
-    "discovered_from": "source name/URL where dates were found" or null,
-    
-    "biography": "A 100-200 word biographical summary. Include specific facts found in sources. If little information found, say so briefly.",
-    "biography_short": "2-3 sentence summary of who this person was.",
-    "notable": true/false (was this person historically significant?),
-    "notable_reason": "Brief explanation if notable, null otherwise",
-    "confidence": "low/medium/high based on how much verifiable information was found",
-    "occupation": "Their occupation if mentioned, null otherwise",
-    "migration_path": ["List of places they lived in order, if determinable"],
-    "locations": [
+    "birth_year_discovered": year or null,
+    "death_year_discovered": year or null,
+    "birth_place_discovered": "place" or null,
+    "death_place_discovered": "place" or null,
+    "discovered_from": "source URL" or null,
+
+    "biography": "200-400 word detailed biographical summary. Include ALL specific facts: roles, achievements, family connections, historical involvement. Be comprehensive.",
+    "biography_short": "2-3 sentence summary highlighting their most significant contribution or connection.",
+
+    "notable": true/false (mark true if: connected to famous people, involved in historic events, mentioned in history books, has museum/memorial, signed historic documents, or played any role in American history),
+    "notable_reason": "Specific explanation: what they did, who they knew, why they matter",
+
+    "confidence": "low/medium/high",
+    "occupation": "occupation if mentioned",
+    "migration_path": ["ordered list of places lived"],
+
+    "notable_relatives": [
         {{
-            "name": "Name of place",
-            "type": "cemetery/museum/historic_site/church/residence",
-            "address": "Street address if found",
-            "coordinates": [lat, lon] or null,
-            "description": "Why this location is relevant"
+            "name": "Full name of notable relative",
+            "relationship": "father/mother/stepfather/spouse/father-in-law/etc",
+            "why_notable": "Why this person is historically significant (Governor, signer, founder, etc.)"
         }}
     ],
+
     "historic_events": [
         {{
-            "name": "Name of event",
-            "year": year or null,
-            "date_range": "e.g. 1756-1763" or null,
-            "description": "What the event was",
-            "connection": "How this ancestor connected to the event"
+            "name": "Official name of event (e.g., 'Flushing Remonstrance', 'Salem Witch Trials')",
+            "year": start year,
+            "end_year": end year if multi-year event,
+            "date_range": "e.g., 1657" or "1692-1693",
+            "event_type": "political/religious/war/trial/migration/economic",
+            "description": "What the event was about",
+            "ancestor_role": "What specifically this ancestor did (signed, advocated, fought, testified, etc.)",
+            "historical_significance": "Why this event matters in history"
         }}
     ],
+
+    "locations": [
+        {{
+            "name": "Name of place (museum, house, cemetery, church)",
+            "type": "cemetery/museum/historic_site/church/residence/memorial",
+            "address": "Street address if found",
+            "description": "Why this location is significant to this ancestor"
+        }}
+    ],
+
+    "contributions": [
+        "List of specific contributions to history (e.g., 'Advocated for religious freedom', 'Signed the Flushing Remonstrance')"
+    ],
+
     "flags": {{
         "has_museum": true/false,
         "has_cemetery": true/false,
         "has_historic_site": true/false,
         "mayflower_connection": true/false,
-        "military_service": true/false
+        "military_service": true/false,
+        "signed_historic_document": true/false,
+        "founded_settlement": true/false,
+        "religious_leader": true/false,
+        "political_figure": true/false
     }}
 }}
 
-If the search results contain no useful information about this specific person, return minimal data with confidence: "low".
+IMPORTANT: Be thorough! If the results mention the First Amendment, religious freedom, witch trials, colonial governance, or any historical significance - extract it. Don't miss connections to famous events or people.
 
-Respond with ONLY valid JSON, no other text."""
+Respond with ONLY valid JSON."""
 
         response = self.synthesize_fn(prompt)
         
@@ -493,13 +525,29 @@ Respond with ONLY valid JSON, no other text."""
         result.migration_path = synthesis.get("migration_path", [])
         result.locations = synthesis.get("locations", [])
         result.historic_events = synthesis.get("historic_events", [])
-        
+
+        # Notable family connections
+        result.notable_relatives = synthesis.get("notable_relatives", [])
+
+        # If notable relatives found, ensure notable flag is set
+        if result.notable_relatives and not result.notable:
+            result.notable = True
+            relatives_summary = ", ".join([
+                f"{r.get('relationship')}: {r.get('name')}"
+                for r in result.notable_relatives[:2]
+            ])
+            result.notable_reason = result.notable_reason or f"Connected to notable figures ({relatives_summary})"
+
         flags = synthesis.get("flags", {})
         result.has_museum = flags.get("has_museum", False)
         result.has_cemetery = flags.get("has_cemetery", False)
         result.has_historic_site = flags.get("has_historic_site", False)
         result.mayflower_connection = flags.get("mayflower_connection", False)
         result.military_service = flags.get("military_service", False)
+
+        # Additional flags from enhanced extraction
+        if flags.get("signed_historic_document") or flags.get("founded_settlement"):
+            result.notable = True
     
     def research_batch(self, individuals: list[dict], 
                        individual_objects: dict = None,

@@ -11,11 +11,13 @@ from datetime import datetime
 from .gedcom_parser import GedcomParser
 from .researcher import AncestorResearcher, ResearchResult, create_anthropic_synthesizer
 from .locations import LocationProcessor, create_nominatim_geocoder
+from .events import EventProcessor, HistoricEvent
 from .search import (
     create_serpapi_search,
     create_brave_search,
     create_auto_search,
     create_mock_search,
+    create_deep_search,
     get_available_providers
 )
 
@@ -46,7 +48,11 @@ class WhereTheyWalked:
             synthesize_fn=synthesize_fn,
             geocode_fn=self.geocode_fn
         )
-        
+        self.event_processor = EventProcessor(
+            search_fn=search_fn,
+            synthesize_fn=synthesize_fn
+        )
+
         self.individuals = {}
         self.families = {}
         self.research_results = {}
@@ -137,6 +143,51 @@ class WhereTheyWalked:
         
         return self.location_processor.to_dict()["stats"]
     
+    def process_events(self, verbose: bool = False) -> dict:
+        """
+        Process all historic events from research results.
+        Extracts, dedupes, enriches with search, and links ancestors.
+
+        Args:
+            verbose: Print progress
+
+        Returns:
+            Event stats dict
+        """
+        if not self.research_results:
+            return {"error": "No research results. Run research_ancestors() first."}
+
+        # Extract events from research results
+        results_list = list(self.research_results.values())
+        self.event_processor.extract_events_from_research(results_list)
+
+        if verbose:
+            print(f"Extracted {len(self.event_processor.events)} unique historic events")
+
+        # Enrich events with dedicated searches
+        stats = self.event_processor.enrich_events(verbose=verbose)
+
+        return stats
+
+    def get_events(self, event_type: str = None) -> list[dict]:
+        """
+        Get all processed historic events.
+
+        Args:
+            event_type: Filter by type (war, trial, political, etc.)
+        """
+        if event_type:
+            events = self.event_processor.get_events_by_type(event_type)
+        else:
+            events = list(self.event_processor.events.values())
+
+        return [evt.to_dict() for evt in events]
+
+    def get_shared_events(self, min_ancestors: int = 2) -> list[dict]:
+        """Get events connected to multiple ancestors."""
+        events = self.event_processor.get_shared_events(min_ancestors)
+        return [evt.to_dict() for evt in events]
+
     def get_notable_ancestors(self) -> list[dict]:
         """Get ancestors flagged as notable."""
         return [
@@ -227,14 +278,16 @@ class WhereTheyWalked:
             "stats": self.get_stats(),
             "ancestors": [r.to_dict() for r in self.research_results.values()],
             "locations": self.location_processor.to_dict(),
+            "events": self.event_processor.to_dict(),
             "timeline": self.get_timeline(),
             "notable": self.get_notable_ancestors(),
-            "shared_locations": self.get_shared_locations(2)
+            "shared_locations": self.get_shared_locations(2),
+            "shared_events": self.get_shared_events(2)
         }
-        
+
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2)
-        
+
         return filepath
     
     def export_geojson(self, filepath: str):
@@ -286,6 +339,7 @@ class WhereTheyWalked:
 
 def create_app(search_provider: str = "auto",
                use_mock: bool = False,
+               deep_search: bool = True,
                verbose: bool = False) -> WhereTheyWalked:
     """
     Create a fully-configured WhereTheyWalked application instance.
@@ -305,6 +359,7 @@ def create_app(search_provider: str = "auto",
             - "brave": Use Brave Search (requires BRAVE_API_KEY)
             - "mock": Use mock search (for testing)
         use_mock: If True, use mock functions for both search and synthesis
+        deep_search: If True, fetch full page content from top URLs (more thorough)
         verbose: Print configuration details
 
     Returns:
@@ -317,8 +372,8 @@ def create_app(search_provider: str = "auto",
         # Auto-configure from environment
         app = create_app()
 
-        # Use specific search provider
-        app = create_app(search_provider="serpapi")
+        # Use specific search provider with deep search
+        app = create_app(search_provider="serpapi", deep_search=True)
 
         # Testing without API calls
         app = create_app(use_mock=True)
@@ -354,6 +409,12 @@ def create_app(search_provider: str = "auto",
                 print("Using Brave Search")
         else:
             raise ValueError(f"Unknown search provider: {search_provider}")
+
+        # Wrap with deep search if enabled
+        if search_fn and deep_search and search_provider != "mock":
+            search_fn = create_deep_search(search_fn, fetch_top_n=3)
+            if verbose:
+                print("Deep search enabled (fetching full page content)")
 
         if not search_fn:
             if verbose:

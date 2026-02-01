@@ -323,3 +323,187 @@ def get_available_providers() -> list[str]:
         available.append("brave")
 
     return available
+
+
+def fetch_url_content(url: str, timeout: int = 15, max_chars: int = 15000) -> Optional[str]:
+    """
+    Fetch and extract text content from a URL.
+
+    Args:
+        url: The URL to fetch
+        timeout: Request timeout in seconds
+        max_chars: Maximum characters to return
+
+    Returns:
+        Extracted text content or None if failed
+    """
+    import re
+    from html.parser import HTMLParser
+
+    class TextExtractor(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.text_parts = []
+            self.skip_tags = {'script', 'style', 'nav', 'header', 'footer', 'aside'}
+            self.current_skip = 0
+
+        def handle_starttag(self, tag, attrs):
+            if tag in self.skip_tags:
+                self.current_skip += 1
+
+        def handle_endtag(self, tag):
+            if tag in self.skip_tags and self.current_skip > 0:
+                self.current_skip -= 1
+
+        def handle_data(self, data):
+            if self.current_skip == 0:
+                text = data.strip()
+                if text:
+                    self.text_parts.append(text)
+
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; WhereTheyWalked/1.0; genealogy research)",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        }
+        req = Request(url, headers=headers)
+
+        with urlopen(req, timeout=timeout) as response:
+            content_type = response.headers.get('Content-Type', '')
+            if 'text/html' not in content_type and 'text/plain' not in content_type:
+                return None
+
+            html = response.read().decode('utf-8', errors='ignore')
+
+        # Extract text from HTML
+        extractor = TextExtractor()
+        extractor.feed(html)
+        text = ' '.join(extractor.text_parts)
+
+        # Clean up whitespace
+        text = re.sub(r'\s+', ' ', text)
+
+        return text[:max_chars] if text else None
+
+    except Exception:
+        return None
+
+
+def create_deep_search(search_fn: Callable[[str], str],
+                       fetch_top_n: int = 3,
+                       max_content_per_url: int = 10000) -> Callable[[str], str]:
+    """
+    Create a deep search function that fetches full page content.
+
+    Gets search results, then fetches full content from top URLs
+    to provide much richer context for AI synthesis.
+
+    Args:
+        search_fn: Base search function (SerpAPI or Brave)
+        fetch_top_n: Number of top URLs to fetch full content from
+        max_content_per_url: Max chars to extract per URL
+
+    Returns:
+        Function that returns search snippets + full page content
+    """
+    import re
+
+    def deep_search(query: str) -> str:
+        # Get initial search results
+        search_results = search_fn(query)
+
+        # Extract URLs from search results
+        url_pattern = r'URL: (https?://[^\s]+)'
+        urls = re.findall(url_pattern, search_results)
+
+        # Filter out problematic URLs
+        skip_domains = ['facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com',
+                        'youtube.com', 'tiktok.com', 'pinterest.com']
+        good_urls = [u for u in urls if not any(d in u for d in skip_domains)]
+
+        # Fetch content from top URLs
+        full_content = []
+        for url in good_urls[:fetch_top_n]:
+            content = fetch_url_content(url, max_chars=max_content_per_url)
+            if content and len(content) > 200:  # Only include substantial content
+                full_content.append(f"\n== Full Content from {url} ==\n{content}\n")
+
+        # Combine search results with full content
+        if full_content:
+            return search_results + "\n\n== DETAILED PAGE CONTENT ==\n" + "\n".join(full_content)
+
+        return search_results
+
+    return deep_search
+
+
+def create_serpapi_search_with_urls(api_key: str = None,
+                                     num_results: int = 10,
+                                     timeout: int = 30) -> tuple[Callable[[str], str], Callable[[str], list]]:
+    """
+    Create SerpAPI search that also returns URLs for further fetching.
+
+    Returns:
+        Tuple of (search_fn, get_urls_fn)
+    """
+    api_key = api_key or os.environ.get("SERPAPI_KEY")
+    if not api_key:
+        raise ValueError("SerpAPI key required.")
+
+    def search_with_urls(query: str) -> tuple[str, list]:
+        """Returns (formatted_results, list_of_urls)"""
+        params = {
+            "api_key": api_key,
+            "q": query,
+            "engine": "google",
+            "num": num_results,
+            "gl": "us",
+            "hl": "en"
+        }
+
+        url = f"https://serpapi.com/search?{urlencode(params)}"
+
+        try:
+            req = Request(url, headers={"Accept": "application/json"})
+            with urlopen(req, timeout=timeout) as response:
+                data = json.loads(response.read().decode('utf-8'))
+        except Exception as e:
+            raise SearchError(f"SerpAPI error: {e}")
+
+        results = []
+        urls = []
+
+        # Knowledge panel
+        if "knowledge_graph" in data:
+            kg = data["knowledge_graph"]
+            results.append("== Knowledge Panel ==")
+            for key in ['title', 'description', 'source']:
+                if key in kg:
+                    val = kg[key] if key != 'source' else kg[key].get('link', '')
+                    results.append(f"{key.title()}: {val}")
+            results.append("")
+
+        # Organic results
+        if "organic_results" in data:
+            results.append("== Search Results ==\n")
+            for i, item in enumerate(data["organic_results"], 1):
+                results.append(f"[{i}] {item.get('title', 'No title')}")
+                link = item.get('link', '')
+                results.append(f"URL: {link}")
+                if link:
+                    urls.append(link)
+                if "snippet" in item:
+                    results.append(f"Snippet: {item['snippet']}")
+                results.append("")
+
+        return "\n".join(results), urls
+
+    def search(query: str) -> str:
+        text, _ = search_with_urls(query)
+        return text
+
+    def get_urls(query: str) -> list:
+        _, urls = search_with_urls(query)
+        return urls
+
+    return search, get_urls
