@@ -607,21 +607,147 @@ Respond with ONLY valid JSON."""
         return results
 
 
-def create_anthropic_synthesizer(api_key: str = None):
-    """Create a synthesis function using Anthropic's Claude API."""
+class TokenTracker:
+    """Track token usage and estimate costs across API calls."""
+
+    # Pricing per million tokens (as of 2024)
+    PRICING = {
+        "claude-3-5-haiku-latest": {"input": 1.00, "output": 5.00},
+        "claude-3-5-sonnet-latest": {"input": 3.00, "output": 15.00},
+        "claude-3-opus-latest": {"input": 15.00, "output": 75.00},
+    }
+
+    def __init__(self):
+        self.calls = []  # List of {model, input_tokens, output_tokens, prompt_type}
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+
+    def record(self, model: str, input_tokens: int, output_tokens: int, prompt_type: str = "unknown"):
+        """Record a single API call."""
+        self.calls.append({
+            "model": model,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "prompt_type": prompt_type
+        })
+        self.total_input_tokens += input_tokens
+        self.total_output_tokens += output_tokens
+
+    def get_cost(self, model: str = "claude-3-5-haiku-latest") -> dict:
+        """Calculate cost for a specific model."""
+        pricing = self.PRICING.get(model, self.PRICING["claude-3-5-haiku-latest"])
+        input_cost = (self.total_input_tokens / 1_000_000) * pricing["input"]
+        output_cost = (self.total_output_tokens / 1_000_000) * pricing["output"]
+        return {
+            "model": model,
+            "input_tokens": self.total_input_tokens,
+            "output_tokens": self.total_output_tokens,
+            "total_tokens": self.total_input_tokens + self.total_output_tokens,
+            "input_cost": round(input_cost, 4),
+            "output_cost": round(output_cost, 4),
+            "total_cost": round(input_cost + output_cost, 4)
+        }
+
+    def get_cost_comparison(self) -> dict:
+        """Compare costs across different models."""
+        return {model: self.get_cost(model) for model in self.PRICING}
+
+    def get_breakdown_by_type(self) -> dict:
+        """Get token usage broken down by prompt type."""
+        breakdown = {}
+        for call in self.calls:
+            ptype = call["prompt_type"]
+            if ptype not in breakdown:
+                breakdown[ptype] = {"calls": 0, "input_tokens": 0, "output_tokens": 0}
+            breakdown[ptype]["calls"] += 1
+            breakdown[ptype]["input_tokens"] += call["input_tokens"]
+            breakdown[ptype]["output_tokens"] += call["output_tokens"]
+        return breakdown
+
+    def print_summary(self):
+        """Print a formatted summary of usage and costs."""
+        print("\n" + "=" * 60)
+        print("TOKEN USAGE SUMMARY")
+        print("=" * 60)
+        print(f"Total API calls: {len(self.calls)}")
+        print(f"Total input tokens: {self.total_input_tokens:,}")
+        print(f"Total output tokens: {self.total_output_tokens:,}")
+        print(f"Total tokens: {self.total_input_tokens + self.total_output_tokens:,}")
+
+        print("\n--- Cost by Model ---")
+        for model, cost in self.get_cost_comparison().items():
+            model_short = model.replace("claude-3-5-", "").replace("-latest", "")
+            print(f"  {model_short:12} ${cost['total_cost']:.4f} (in: ${cost['input_cost']:.4f}, out: ${cost['output_cost']:.4f})")
+
+        breakdown = self.get_breakdown_by_type()
+        if breakdown:
+            print("\n--- Breakdown by Type ---")
+            for ptype, stats in breakdown.items():
+                print(f"  {ptype}: {stats['calls']} calls, {stats['input_tokens']:,} in / {stats['output_tokens']:,} out")
+
+    def reset(self):
+        """Reset all tracking."""
+        self.calls = []
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+
+
+# Global tracker instance
+_token_tracker = TokenTracker()
+
+
+def get_token_tracker() -> TokenTracker:
+    """Get the global token tracker instance."""
+    return _token_tracker
+
+
+def create_anthropic_synthesizer(api_key: str = None, model: str = "claude-3-5-haiku-latest",
+                                  track_tokens: bool = True):
+    """Create a synthesis function using Anthropic's Claude API.
+
+    Args:
+        api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
+        model: Model to use (default: claude-3-5-haiku-latest)
+        track_tokens: Whether to track token usage for cost estimation
+
+    Returns:
+        Synthesis function and optionally updates global token tracker
+    """
     import anthropic
-    
+
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
     client = anthropic.Anthropic(api_key=api_key)
-    
+
+    def _detect_prompt_type(prompt: str) -> str:
+        """Auto-detect prompt type from content for tracking."""
+        prompt_lower = prompt.lower()[:200]  # Check first 200 chars
+        if "normalize this place" in prompt_lower or "normalize these place" in prompt_lower:
+            return "place_normalization"
+        elif "location" in prompt_lower and "enrich" in prompt_lower:
+            return "location_enrichment"
+        elif "historic event" in prompt_lower:
+            return "event_enrichment"
+        elif "classify" in prompt_lower:
+            return "classification"
+        else:
+            return "ancestor_synthesis"
+
     def synthesize(prompt: str) -> str:
         response = client.messages.create(
-            model="claude-3-5-haiku-latest",
+            model=model,
             max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         )
+
+        # Track token usage with auto-detected type
+        if track_tokens:
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
+            prompt_type = _detect_prompt_type(prompt)
+            _token_tracker.record(model, input_tokens, output_tokens, prompt_type)
+
         return response.content[0].text
-    
+
     return synthesize
 
 

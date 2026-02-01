@@ -15,7 +15,9 @@ from .researcher import (
     AncestorResearcher,
     ResearchResult,
     TimelineValidator,
-    create_anthropic_synthesizer
+    TokenTracker,
+    create_anthropic_synthesizer,
+    get_token_tracker
 )
 from .locations import LocationProcessor, Location, AncestorConnection, create_nominatim_geocoder
 from .events import EventProcessor, HistoricEvent, AncestorEventConnection
@@ -57,5 +59,8 @@ __all__ = [
     "SearchError",
     # Other utilities
     "create_nominatim_geocoder",
-    "create_anthropic_synthesizer"
+    "create_anthropic_synthesizer",
+    # Token tracking
+    "TokenTracker",
+    "get_token_tracker"
 ]

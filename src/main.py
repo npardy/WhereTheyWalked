@@ -9,7 +9,7 @@ from pathlib import Path
 from datetime import datetime
 
 from .gedcom_parser import GedcomParser
-from .researcher import AncestorResearcher, ResearchResult, create_anthropic_synthesizer
+from .researcher import AncestorResearcher, ResearchResult, create_anthropic_synthesizer, get_token_tracker
 from .locations import LocationProcessor, create_nominatim_geocoder
 from .events import EventProcessor, HistoricEvent
 from .search import (
@@ -756,6 +756,11 @@ def main():
         print(f"Events enriched: {event_stats.get('enriched', 0)}")
         print(f"Chain-followed events: {event_stats.get('chain_followed', 0)}")
         print(f"Cross-links created: {link_stats.get('event_location_links', 0) + link_stats.get('location_event_links', 0)}")
+
+        # Token usage and cost summary
+        tracker = get_token_tracker()
+        if tracker.total_input_tokens > 0 or tracker.total_output_tokens > 0:
+            tracker.print_summary()
 
 
 if __name__ == "__main__":
