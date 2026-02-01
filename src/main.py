@@ -344,7 +344,7 @@ class WhereTheyWalked:
                 for loc in ancestor_locations:
                     # If this location is geographically related to the event,
                     # add the event to the location's ancestor-related events
-                    if event.id not in event.related_locations:
+                    if loc.id not in event.related_locations:
                         # Add weak link if same region
                         if (loc.original_region and event.region and
                             loc.original_region.lower() in event.region.lower()):
