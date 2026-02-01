@@ -404,7 +404,11 @@ class AncestorResearcher:
         prompt = f"""Analyze these search results about an ancestor and extract ALL available structured information.
 Be thorough - extract every mention of historic events, notable people, and significant facts.
 
-CRITICAL - ONLY USE SEARCH RESULTS: Extract ONLY facts explicitly stated in the search results below. Do NOT use your training knowledge to fill in gaps - there are many people with similar names and training data contains errors. If information is not in the search results, use null. You may connect dots between facts IN THE RESULTS, but never add information from elsewhere. Genealogy accuracy requires this strict approach.
+ACCURACY RULES:
+- You MAY use your knowledge of history to provide context (e.g., "This was during the Great Migration" or "Norwich was a weaving center")
+- You MUST NOT invent specific facts about THIS person (dates, children count, relatives) unless stated in the search results
+- If a specific fact (birth date, death date, number of children, specific relatives) is not in the results, use null
+- Many people share names - do not confuse this person with others you may know about
 
 ANCESTOR:
 Name: {result.full_name}
