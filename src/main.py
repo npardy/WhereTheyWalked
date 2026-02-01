@@ -615,9 +615,9 @@ def create_app(search_provider: str = "auto",
 
         # Wrap with deep search if enabled
         if search_fn and deep_search and search_provider != "mock":
-            search_fn = create_deep_search(search_fn, fetch_top_n=5)  # Try 5 to get ~3 successes
+            search_fn = create_deep_search(search_fn, fetch_top_n=5)  # Guarantees 5 pages
             if verbose:
-                print("Deep search enabled (fetching full page content)")
+                print("Deep search enabled (fetching 5 full pages)")
 
         if not search_fn:
             if verbose:

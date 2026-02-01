@@ -508,17 +508,17 @@ def fetch_url_content(url: str, timeout: int = 15, max_chars: int = 15000) -> Op
 
 
 def create_deep_search(search_fn: Callable[[str], str],
-                       fetch_top_n: int = 3,
+                       fetch_top_n: int = 5,
                        max_content_per_url: int = 10000) -> Callable[[str], str]:
     """
     Create a deep search function that fetches full page content.
 
-    Gets search results, then fetches full content from top URLs
-    to provide much richer context for AI synthesis.
+    Gets search results, then fetches full content from URLs until we have
+    fetch_top_n successful pages (not just attempts).
 
     Args:
         search_fn: Base search function (SerpAPI or Brave)
-        fetch_top_n: Number of top URLs to fetch full content from
+        fetch_top_n: Target number of successful page fetches (guarantees this many if possible)
         max_content_per_url: Max chars to extract per URL
 
     Returns:
@@ -534,21 +534,32 @@ def create_deep_search(search_fn: Callable[[str], str],
         url_pattern = r'URL: (https?://[^\s]+)'
         urls = re.findall(url_pattern, search_results)
 
-        # Filter out problematic URLs
+        # Filter out social media (never useful for genealogy)
         skip_domains = ['facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com',
                         'youtube.com', 'tiktok.com', 'pinterest.com']
         good_urls = [u for u in urls if not any(d in u for d in skip_domains)]
 
-        # Fetch content from top URLs
+        # Fetch content until we have fetch_top_n successes (or exhaust URLs)
         full_content = []
-        for url in good_urls[:fetch_top_n]:
+        failed_urls = []
+
+        for url in good_urls:
+            if len(full_content) >= fetch_top_n:
+                break  # We have enough
+
             content = fetch_url_content(url, max_chars=max_content_per_url)
             if content and len(content) > 200:  # Only include substantial content
                 full_content.append(f"\n== Full Content from {url} ==\n{content}\n")
+            else:
+                failed_urls.append(url)
 
         # Combine search results with full content
         if full_content:
-            return search_results + "\n\n== DETAILED PAGE CONTENT ==\n" + "\n".join(full_content)
+            result = search_results + "\n\n== DETAILED PAGE CONTENT ==\n" + "\n".join(full_content)
+            # Note which URLs couldn't be fetched (these are often the best sources)
+            if failed_urls:
+                result += f"\n\n[Note: {len(failed_urls)} URLs could not be fetched (JavaScript required): {', '.join(failed_urls[:3])}...]"
+            return result
 
         return search_results
 
