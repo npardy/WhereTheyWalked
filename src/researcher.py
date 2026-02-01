@@ -550,7 +550,7 @@ def create_anthropic_synthesizer(api_key: str = None):
     def synthesize(prompt: str) -> str:
         response = client.messages.create(
             model="claude-3-5-haiku-latest",
-            max_tokens=2000,
+            max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         )
         return response.content[0].text
