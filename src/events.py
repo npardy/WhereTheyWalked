@@ -223,11 +223,16 @@ class EventProcessor:
                         )
 
                         # Add the ancestor connection
+                        # Use AI-provided connection_type if available, else infer from details
+                        ai_connection_type = evt.get('connection_type')
+                        connection_details = evt.get('ancestor_role', '') or evt.get('connection', '')
+                        connection_type = ai_connection_type or self._infer_connection_type(connection_details)
+
                         connection = AncestorEventConnection(
                             person_id=result.individual_id,
                             person_name=result.full_name,
-                            connection_type=self._infer_connection_type(evt.get('connection', '')),
-                            connection_details=evt.get('connection', ''),
+                            connection_type=connection_type,
+                            connection_details=connection_details,
                             year=year
                         )
                         event.ancestor_connections.append(connection)
@@ -236,7 +241,8 @@ class EventProcessor:
 
         return self.events
 
-    def _add_ancestor_connection(self, event_id: str, result, connection_details: str):
+    def _add_ancestor_connection(self, event_id: str, result, connection_details: str,
+                                   ai_connection_type: str = None):
         """Add an ancestor connection to an existing event."""
         event = self.events.get(event_id)
         if not event:
@@ -247,10 +253,13 @@ class EventProcessor:
         if result.individual_id in existing_ids:
             return
 
+        # Use AI-provided connection_type if available, else infer
+        connection_type = ai_connection_type or self._infer_connection_type(connection_details)
+
         connection = AncestorEventConnection(
             person_id=result.individual_id,
             person_name=result.full_name,
-            connection_type=self._infer_connection_type(connection_details),
+            connection_type=connection_type,
             connection_details=connection_details
         )
         event.ancestor_connections.append(connection)

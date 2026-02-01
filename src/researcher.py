@@ -73,7 +73,7 @@ class ResearchResult:
     locations: list = field(default_factory=list)
     historic_events: list = field(default_factory=list)
     occupation: Optional[str] = None
-    migration_path: list[str] = field(default_factory=list)
+    migration_path: list = field(default_factory=list)  # List of {place, year_arrived, year_left, reason, location_type}
     
     # Notable family connections (e.g., stepfather = John Winthrop)
     notable_relatives: list = field(default_factory=list)  # [{name, relationship, why_notable}]
@@ -431,7 +431,16 @@ CRITICAL INSTRUCTIONS:
 
     "confidence": "low/medium/high",
     "occupation": "occupation if mentioned",
-    "migration_path": ["ordered list of places lived"],
+
+    "migration_path": [
+        {{
+            "place": "Place name (city, region)",
+            "year_arrived": year or null,
+            "year_left": year or null,
+            "reason": "Why they moved here or left (immigration, religious freedom, land, marriage, death, etc.)",
+            "location_type": "origin/immigration_port/settlement/residence/final_residence"
+        }}
+    ],
 
     "notable_relatives": [
         {{
@@ -447,19 +456,23 @@ CRITICAL INSTRUCTIONS:
             "year": start year,
             "end_year": end year if multi-year event,
             "date_range": "e.g., 1657" or "1692-1693",
-            "event_type": "political/religious/war/trial/migration/economic",
+            "event_type": "political/religious/war/trial/migration/economic/natural_disaster/epidemic",
             "description": "What the event was about",
             "ancestor_role": "What specifically this ancestor did (signed, advocated, fought, testified, etc.)",
+            "connection_type": "participant/leader/victim/witness/survivor/signatory/advocate/military/bystander (how they were connected)",
             "historical_significance": "Why this event matters in history"
         }}
     ],
 
     "locations": [
         {{
-            "name": "Name of place (museum, house, cemetery, church)",
-            "type": "cemetery/museum/historic_site/church/residence/memorial",
+            "name": "Name of place",
+            "type": "birthplace/deathplace/burial_site/cemetery/church/meeting_house/museum/historic_house/historic_site/memorial/settlement/colony/port/courthouse/battlefield/farm/mill/trading_post/immigration_point/residence/other",
             "address": "Street address if found",
-            "description": "Why this location is significant to this ancestor"
+            "description": "Why this location is significant to this ancestor",
+            "year": year associated with this location or null,
+            "importance": "high/medium/low (high = museum, memorial, major historic site; medium = documented location with history; low = just a residence or town)",
+            "should_enrich": true/false (true if this location has historical significance worth researching further)
         }}
     ],
 

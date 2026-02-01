@@ -72,6 +72,11 @@ class Location:
     source_urls: list = field(default_factory=list)
     confidence: str = "low"  # low, medium, high
     needs_verification: bool = False
+
+    # AI-determined importance and enrichment
+    importance: str = "low"  # high, medium, low - AI determines significance
+    should_enrich: bool = False  # AI determines if worth deeper research
+    year: Optional[int] = None  # Year associated with this location
     
     # Chain tracking (for moved locations)
     relocation_chain: list = field(default_factory=list)  # [{name, year, reason}, ...]
@@ -104,7 +109,10 @@ class Location:
             "ancestor_connections": [c.to_dict() for c in self.ancestor_connections],
             "source_urls": self.source_urls,
             "confidence": self.confidence,
-            "needs_verification": self.needs_verification
+            "needs_verification": self.needs_verification,
+            "importance": self.importance,
+            "should_enrich": self.should_enrich,
+            "year": self.year
         }
     
     def add_connection(self, person_id: str, person_name: str, relationship: str,
@@ -252,7 +260,11 @@ class LocationProcessor:
                     address = loc.get("address", "")
                     description = loc.get("description", "")
                     coords = loc.get("coordinates")
-                    
+                    # New AI-provided fields
+                    importance = loc.get("importance", "low")
+                    should_enrich = loc.get("should_enrich", False)
+                    loc_year = loc.get("year")
+
                     if name:
                         self._add_location(
                             name=name,
@@ -263,10 +275,12 @@ class LocationProcessor:
                             person_id=person_id,
                             person_name=person_name,
                             relationship="event_at",
-                            year=None,
+                            year=loc_year,
                             event_description=description,
                             coordinates=tuple(coords) if coords else None,
-                            address=address
+                            address=address,
+                            importance=importance,
+                            should_enrich=should_enrich
                         )
             
             # Add source URLs to relevant locations
@@ -278,8 +292,22 @@ class LocationProcessor:
                                   event_description: str = None) -> None:
         """Add location from a place string."""
         parsed = self._parse_place_string(place)
-        loc_type = self._infer_location_type(place, relationship)
-        
+
+        # Use relationship to determine type instead of keyword matching
+        relationship_to_type = {
+            "born_at": "birthplace",
+            "died_at": "deathplace",
+            "buried_at": "burial_site",
+            "married_at": "church",  # Usually churches/meeting houses
+            "lived_at": "residence",
+            "event_at": "historic_site",
+        }
+        loc_type = relationship_to_type.get(relationship, self._infer_location_type(place, relationship))
+
+        # Birthplaces and deathplaces are generally worth enriching
+        should_enrich = relationship in ("born_at", "died_at", "buried_at", "married_at")
+        importance = "medium" if should_enrich else "low"
+
         self._add_location(
             name=parsed["name"] or parsed["city"],
             city=parsed["city"],
@@ -290,7 +318,9 @@ class LocationProcessor:
             person_name=person_name,
             relationship=relationship,
             year=year,
-            event_description=event_description
+            event_description=event_description,
+            importance=importance,
+            should_enrich=should_enrich
         )
     
     def _add_location(self, name: str, city: str, region: str, country: str,
@@ -298,11 +328,13 @@ class LocationProcessor:
                       relationship: str, year: int = None,
                       event_description: str = None,
                       coordinates: tuple = None,
-                      address: str = None) -> None:
+                      address: str = None,
+                      importance: str = "low",
+                      should_enrich: bool = False) -> None:
         """Add or update a location with an ancestor connection."""
         # Generate ID for deduplication
         loc_id = self._generate_location_id(name or city, city, region)
-        
+
         if loc_id in self.locations:
             # Add connection to existing location
             self.locations[loc_id].add_connection(
@@ -311,6 +343,11 @@ class LocationProcessor:
             # Update coordinates if we have them and location doesn't
             if coordinates and not self.locations[loc_id].coordinates:
                 self.locations[loc_id].coordinates = coordinates
+            # Upgrade importance/should_enrich if new data is higher priority
+            if importance == "high" or (importance == "medium" and self.locations[loc_id].importance == "low"):
+                self.locations[loc_id].importance = importance
+            if should_enrich:
+                self.locations[loc_id].should_enrich = True
         else:
             # Create new location
             loc = Location(
@@ -322,7 +359,10 @@ class LocationProcessor:
                 original_region=region,
                 original_country=country,
                 current_address=address,
-                coordinates=coordinates
+                coordinates=coordinates,
+                importance=importance,
+                should_enrich=should_enrich,
+                year=year
             )
             loc.add_connection(person_id, person_name, relationship, year, event_description)
             self.locations[loc_id] = loc
@@ -330,18 +370,27 @@ class LocationProcessor:
     def enrich_locations(self, verbose: bool = False) -> None:
         """
         Enrich locations with search and geocoding.
-        Only searches for types that benefit from rich data.
+        Uses AI-determined should_enrich flag, falling back to type-based rules.
         """
         # Iterate over a copy of keys since chain-following may add new locations
         for loc_id in list(self.locations.keys()):
             location = self.locations[loc_id]
             if verbose:
-                print(f"Processing: {location.name} ({location.type})")
-            
-            # Determine if we need rich search or just geocoding
-            if location.type in SEARCHABLE_TYPES:
+                print(f"Processing: {location.name} ({location.type}, importance={location.importance})")
+
+            # Determine if we need rich search:
+            # 1. AI said should_enrich = True, OR
+            # 2. Type is in traditional searchable types (fallback for old data), OR
+            # 3. Importance is high
+            should_search = (
+                location.should_enrich or
+                location.type in SEARCHABLE_TYPES or
+                location.importance == "high"
+            )
+
+            if should_search:
                 self._enrich_with_search(location, verbose)
-            
+
             # Geocode if we don't have coordinates
             if not location.coordinates and self.geocode_fn:
                 self._geocode_location(location, verbose)
