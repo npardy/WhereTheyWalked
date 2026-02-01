@@ -458,7 +458,7 @@ class EventProcessor:
         # Synthesize
         prompt = f"""Analyze these search results about a historic event and extract detailed information.
 
-CRITICAL - NEVER HALLUCINATE: Only extract facts explicitly stated in the search results. If information is not found, use null. You may synthesize information from multiple sources, but NEVER invent dates, figures, or details not mentioned. Historical accuracy is essential.
+CRITICAL - ONLY USE SEARCH RESULTS: Extract ONLY facts explicitly stated in the search results below. Do NOT use your training knowledge to fill in details - event names can be ambiguous and training data may be inaccurate. If information is not found, use null. You may synthesize from multiple sources IN THE RESULTS, but never add external knowledge.
 
 EVENT: {event.name}
 KNOWN DATE: {event.date_range or event.year or 'Unknown'}

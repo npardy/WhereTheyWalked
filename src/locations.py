@@ -1014,7 +1014,7 @@ Modern attractions (built after {max_year}) should NOT be included unless they a
 
         prompt = f"""Analyze these search results about a historic location and extract ALL contextually relevant information.
 
-CRITICAL - NEVER HALLUCINATE: Only extract facts explicitly stated in the search results. If information is not found, use null. You may infer from context, but NEVER invent addresses, dates, or details not mentioned. Accuracy is essential.
+CRITICAL - ONLY USE SEARCH RESULTS: Extract ONLY facts explicitly stated in the search results below. Do NOT use your training knowledge - many locations share names and training data may be outdated or wrong. If information is not found, use null. You may infer from context IN THE RESULTS, but never add external knowledge.
 
 LOCATION:
 Name: {location.name}
