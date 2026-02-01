@@ -11,14 +11,19 @@ from src.search import (
     fetch_url_content,
     fetch_url_with_js,
     is_js_heavy_domain,
-    JS_HEAVY_DOMAINS
+    needs_premium_proxy,
+    JS_HEAVY_DOMAINS,
+    PREMIUM_PROXY_DOMAINS
 )
 
-# Test URLs - known JS-heavy genealogy sites
+# Test URLs - using public pages that don't require login
 TEST_URLS = [
-    "https://www.geni.com/people/William-Nickerson/6000000001960055617",
-    "https://www.familysearch.org/tree/person/details/LZBV-ZN1",
-    "https://www.findagrave.com/memorial/7893421",
+    # FindAGrave - public memorial (should work)
+    ("https://www.findagrave.com/memorial/7893421", "FindAGrave"),
+    # WikiTree - public profile (less protected)
+    ("https://www.wikitree.com/wiki/Nickerson-1", "WikiTree"),
+    # BillionGraves - public page
+    ("https://billiongraves.com/grave/William-Nickerson/5849332", "BillionGraves"),
 ]
 
 
@@ -33,54 +38,50 @@ def main():
         print(f"ScrapingBee API key: {api_key[:8]}...{api_key[-4:]}")
     else:
         print("No SCRAPINGBEE_API_KEY set - JS rendering will be skipped")
+        return
 
-    # Show known JS-heavy domains
-    print(f"\nJS-heavy domains we handle: {', '.join(JS_HEAVY_DOMAINS)}")
-
-    # Test domain detection
-    print("\n--- Domain Detection ---")
-    for url in TEST_URLS:
-        is_js = is_js_heavy_domain(url)
-        print(f"  {url[:50]}... -> JS-heavy: {is_js}")
+    # Show known domains
+    print(f"\nJS-heavy domains: {', '.join(JS_HEAVY_DOMAINS)}")
+    print(f"Premium proxy domains: {', '.join(PREMIUM_PROXY_DOMAINS)}")
 
     # Test fetching
     print("\n--- Fetch Comparison ---")
-    for url in TEST_URLS[:2]:  # Only test first 2 to conserve API credits
-        print(f"\nURL: {url[:60]}...")
+    for url, name in TEST_URLS:
+        print(f"\n{name}: {url[:60]}...")
+        print(f"  Needs premium proxy: {needs_premium_proxy(url)}")
 
         # Try normal fetch
-        print("  Normal fetch: ", end="")
+        print("  Normal fetch: ", end="", flush=True)
         content = fetch_url_content(url, max_chars=5000)
-        if content:
+        if content and len(content) > 100:
             print(f"{len(content)} chars")
-            # Show first 200 chars
-            print(f"    Preview: {content[:200]}...")
-        else:
-            print("FAILED (likely needs JavaScript)")
-
-        # Try JS fetch (if API key available)
-        if api_key:
-            print("  ScrapingBee fetch: ", end="")
-            content = fetch_url_with_js(url, max_chars=5000)
-            if content:
-                print(f"{len(content)} chars")
-                # Show first 200 chars
-                print(f"    Preview: {content[:200]}...")
+            # Check if it's an error page
+            if "incapsula" in content.lower() or "cloudflare" in content.lower():
+                print(f"    (blocked by bot protection)")
             else:
-                print("FAILED")
+                print(f"    Preview: {content[:150].strip()}...")
         else:
-            print("  ScrapingBee fetch: SKIPPED (no API key)")
+            print("FAILED or minimal content")
+
+        # Try JS fetch
+        print("  ScrapingBee fetch: ", end="", flush=True)
+        content = fetch_url_with_js(url, max_chars=5000)
+        if content and len(content) > 100:
+            print(f"{len(content)} chars")
+            if "incapsula" in content.lower() or "cloudflare" in content.lower():
+                print(f"    (still blocked)")
+            else:
+                print(f"    Preview: {content[:150].strip()}...")
+        else:
+            print("FAILED")
 
     print("\n" + "=" * 70)
-    print("INTEGRATION SUMMARY")
+    print("COST NOTES")
     print("=" * 70)
-    if api_key:
-        print("ScrapingBee is configured and ready for JS-heavy sites")
-        print("Deep search will automatically use it for: " + ", ".join(JS_HEAVY_DOMAINS))
-    else:
-        print("To enable JS rendering, set SCRAPINGBEE_API_KEY environment variable")
-        print("Get a free API key at: https://www.scrapingbee.com/")
-        print("Free tier: 1000 credits/month")
+    print("- Regular JS render: 5 credits")
+    print("- Premium proxy render: 10-25 credits")
+    print("- Free tier: 1000 credits/month")
+    print("- At ~15 credits/protected URL, you get ~66 protected fetches/month")
 
 
 if __name__ == "__main__":

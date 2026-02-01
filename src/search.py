@@ -461,6 +461,17 @@ JS_HEAVY_DOMAINS = [
     'wikitree.com',
 ]
 
+# Domains that need premium proxy (have aggressive bot protection)
+# Premium proxy costs 10-25 credits instead of 1, but gets through Incapsula/Cloudflare
+PREMIUM_PROXY_DOMAINS = [
+    'geni.com',
+    'familysearch.org',
+    'findagrave.com',
+    'ancestry.com',
+    'ancestry.co.uk',
+    'billiongraves.com',
+]
+
 
 def fetch_url_with_js(url: str, timeout: int = 30, max_chars: int = 15000) -> Optional[str]:
     """
@@ -507,11 +518,13 @@ def fetch_url_with_js(url: str, timeout: int = 30, max_chars: int = 15000) -> Op
 
     try:
         # ScrapingBee API endpoint
+        # Use premium proxy for heavily protected sites (costs 10-25 credits vs 1)
+        use_premium = needs_premium_proxy(url)
         params = {
             'api_key': api_key,
             'url': url,
             'render_js': 'true',
-            'premium_proxy': 'false',  # Keep costs low
+            'premium_proxy': 'true' if use_premium else 'false',
             'block_ads': 'true',
             'block_resources': 'false',  # Need resources for JS rendering
         }
@@ -543,6 +556,12 @@ def is_js_heavy_domain(url: str) -> bool:
     """Check if URL is from a known JavaScript-heavy domain."""
     url_lower = url.lower()
     return any(domain in url_lower for domain in JS_HEAVY_DOMAINS)
+
+
+def needs_premium_proxy(url: str) -> bool:
+    """Check if URL needs premium proxy to bypass bot protection."""
+    url_lower = url.lower()
+    return any(domain in url_lower for domain in PREMIUM_PROXY_DOMAINS)
 
 
 def fetch_url_content(url: str, timeout: int = 15, max_chars: int = 15000) -> Optional[str]:
